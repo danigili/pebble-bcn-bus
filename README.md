@@ -26,11 +26,18 @@ Necessites el SDK de Pebble ([developer.repebble.com](https://developer.repebble
 o bé [CloudPebble](https://cloudpebble.repebble.com/) si prefereixes el navegador.
 
     pebble build
-    pebble install --phone <IP del mòbil>
 
-Per provar-ho a l'emulador:
+Després, instal·la-ho **a l'emulador**:
 
     pebble install --emulator emery
+
+o bé **a un rellotge de veritat**, passant la IP que et mostra l'app de Pebble
+del mòbil quan hi actives la *Developer Connection*:
+
+    pebble install --phone <IP del mòbil>
+
+Són dues alternatives del mateix comandament, no dos passos: amb l'emulador no
+hi ha cap mòbil ni cap IP pel mig.
 
 ## Com està fet
 
@@ -81,10 +88,21 @@ que **les crides reals a l'API de TMB funcionen** si hi poses les credencials.
     pebble install --emulator emery
 
 Els botons del rellotge es mapegen al teclat: `Q` enrere, `W` amunt, `S`
-central, `X` avall (o les fletxes). Per obrir la pantalla de configuració i
-desar-hi les credencials i les favorites:
+central, `X` avall (o les fletxes).
+
+Per posar-hi les credencials, amb **l'app oberta a l'emulador**, executa en una
+altra terminal:
 
     pebble emu-app-config
+
+La pantalla de configuració s'obre al navegador de l'escriptori, no dins de
+l'emulador. En desar, torna per una URL local que el simulador de telèfon
+recull, i des d'allà les credencials es guarden i les favorites baixen al
+rellotge. Si has sortit de l'app i ets a l'esfera, el comandament no trobarà
+cap configuració a obrir.
+
+En un rellotge de veritat no cal res d'això: obre l'app de Pebble al mòbil,
+busca BCN Bus a la llista i toca l'engranatge.
 
 I per veure què passa per dins, fer una captura, o desencallar l'emulador:
 
