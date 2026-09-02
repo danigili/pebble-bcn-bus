@@ -28,12 +28,12 @@ static const char *const s_strings[T_STR_COUNT][LANG_COUNT] = {
 };
 
 const char *i18n(StrId id) {
-  if ((int)id < 0 || (int)id >= T_STR_COUNT) return "";
+  if ((unsigned)id >= T_STR_COUNT) return "";
   return s_strings[id][s_lang];
 }
 
 void lang_set(Lang lang) {
-  if ((int)lang >= 0 && (int)lang < LANG_COUNT) s_lang = lang;
+  if ((unsigned)lang < LANG_COUNT) s_lang = lang;
 }
 
 Lang lang_get(void) {
