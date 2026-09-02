@@ -108,6 +108,13 @@ function buildConfigPage(settings, favourites) {
     ' var e=box.querySelector(".empty");if(e)box.removeChild(e);',
     ' box.appendChild(row({}));draw();',
     '};',
+    // The emulator hands the page a different return URL than a real
+    // watch does, so read it off the URL and only fall back to the
+    // watch's scheme when it is absent.
+    'function returnUrl(){',
+    ' var m=/[?&]return_to=([^&]+)/.exec(location.href);',
+    ' return m?decodeURIComponent(m[1]):"pebblejs://close#";',
+    '}',
     'document.getElementById("save").onclick=function(){',
     ' var favs=[],rows=box.querySelectorAll(".fav");',
     ' for(var i=0;i<rows.length;i++){',
@@ -121,7 +128,7 @@ function buildConfigPage(settings, favourites) {
     '  lang:document.getElementById("lang").value,',
     '  radius:parseInt(document.getElementById("radius").value,10)||500,',
     '  favs:favs};',
-    ' location.href="pebblejs://close#"+encodeURIComponent(JSON.stringify(out));',
+    ' location.href=returnUrl()+encodeURIComponent(JSON.stringify(out));',
     '};',
     '</script></body></html>'
   ].join('');

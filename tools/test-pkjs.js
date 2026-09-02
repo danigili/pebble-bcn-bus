@@ -136,6 +136,23 @@ truthy('fits comfortably in a data: URI', encodeURIComponent(html).length < 6000
 truthy('no stray closing script tag breaks the page',
        html.split('<script>').length === html.split('<\/script>').length);
 
+// Pull returnUrl() straight out of the generated page and run it: the
+// emulator sends the page a return_to parameter, a real watch does not.
+var returnUrlSource = /function returnUrl\(\)\{[^}]*\}/.exec(html);
+truthy('the page carries a returnUrl helper', !!returnUrlSource);
+
+var callReturnUrl = new Function('location',
+    returnUrlSource[0] + ' return returnUrl();');
+
+check('a real watch closes through the pebblejs scheme',
+      callReturnUrl({ href: 'data:text/html,%3Chtml%3E' }),
+      'pebblejs://close#');
+
+check('the emulator closes through the URL it supplies',
+      callReturnUrl({ href: 'http://localhost:8080/config?return_to=' +
+                            encodeURIComponent('http://localhost:9999/close#') }),
+      'http://localhost:9999/close#');
+
 console.log('\n' + (failures === 0
   ? checks + ' checks passed'
   : failures + ' of ' + checks + ' checks FAILED'));

@@ -72,6 +72,37 @@ les favorites. També comprova que el codi compila per a totes les plataformes.
 No substitueix provar-ho al rellotge, però atrapa el que es pot atrapar sense
 maquinari.
 
+## Provar-ho sense rellotge
+
+El SDK porta emulador, i el JavaScript del mòbil corre a la teva màquina, així
+que **les crides reals a l'API de TMB funcionen** si hi poses les credencials.
+
+    pebble build
+    pebble install --emulator emery
+
+Els botons del rellotge es mapegen al teclat: `Q` enrere, `W` amunt, `S`
+central, `X` avall (o les fletxes). Per obrir la pantalla de configuració i
+desar-hi les credencials i les favorites:
+
+    pebble emu-app-config
+
+I per veure què passa per dins, fer una captura, o desencallar l'emulador:
+
+    pebble logs
+    pebble screenshot
+    pebble kill      # atura emulador i simulador de mòbil
+    pebble wipe      # neteja la memòria si es queda penjat
+
+Dues coses que **no** podràs comprovar fins que tinguis el rellotge:
+
+- **El teclat tàctil.** L'emulador no simula tocs, així que el que provaràs és
+  el camí de botons. Que és, precisament, el que convé tenir ben provat.
+- **La ubicació.** El GPS de l'emulador no és la teva posició real, de manera
+  que “A prop meu” pot no retornar res que tingui sentit.
+
+També pots fer servir [CloudPebble](https://cloudpebble.repebble.com/), que
+porta l'emulador al navegador sense instal·lar res.
+
 ## Coses pendents de verificar
 
 Dues parts s'han escrit sense poder provar-les contra l'API real, i són les
