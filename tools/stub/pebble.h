@@ -97,6 +97,9 @@ void graphics_context_set_text_color(GContext *ctx, GColor color);
 void graphics_context_set_stroke_color(GContext *ctx, GColor color);
 void graphics_fill_rect(GContext *ctx, GRect rect, uint16_t radius, GCornerMask mask);
 void graphics_draw_rect(GContext *ctx, GRect rect);
+void graphics_draw_round_rect(GContext *ctx, GRect rect, uint16_t radius);
+void graphics_draw_line(GContext *ctx, GPoint from, GPoint to);
+void graphics_context_set_stroke_width(GContext *ctx, uint8_t width);
 void graphics_fill_circle(GContext *ctx, GPoint centre, uint16_t radius);
 void graphics_draw_text(GContext *ctx, const char *text, GFont font, GRect box,
                         GTextOverflowMode overflow, GTextAlignment align, void *attrs);
@@ -126,6 +129,12 @@ int32_t persist_read_int(uint32_t key);
 int persist_read_data(uint32_t key, void *buffer, size_t size);
 int persist_write_int(uint32_t key, int32_t value);
 int persist_write_data(uint32_t key, const void *data, size_t size);
+
+#if defined(PBL_ROUND)
+#define PBL_IF_ROUND_ELSE(a, b) (a)
+#else
+#define PBL_IF_ROUND_ELSE(a, b) (b)
+#endif
 
 #define APP_LOG_LEVEL_WARNING 1
 #define APP_LOG(level, ...) ((void)0)

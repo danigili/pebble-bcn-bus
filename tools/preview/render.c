@@ -43,12 +43,21 @@ static void fill_box(int x0, int y0, int w, int h, uint32_t colour) {
     for (int x = x0; x < x0 + w; x++) put(x, y, colour);
 }
 
-static void line(int x0, int y0, int x1, int y1, uint32_t colour) {
+static int s_stroke_w = 1;
+
+static void disc(int cx, int cy, int r, uint32_t colour) {
+  for (int y = -r; y <= r; y++)
+    for (int x = -r; x <= r; x++)
+      if (x * x + y * y <= r * r) put(cx + x, cy + y, colour);
+}
+
+static void thick_line(int x0, int y0, int x1, int y1, uint32_t colour) {
+  int r = s_stroke_w / 2;
   int dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
   int dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
   int err = dx + dy;
   for (;;) {
-    put(x0, y0, colour);
+    if (r > 0) disc(x0, y0, r, colour); else put(x0, y0, colour);
     if (x0 == x1 && y0 == y1) break;
     int e2 = 2 * err;
     if (e2 >= dy) { err += dy; x0 += sx; }
@@ -104,13 +113,24 @@ void graphics_fill_rect(GContext *ctx, GRect r, uint16_t radius, GCornerMask m) 
   fill_box(r.origin.x, r.origin.y, r.size.w, r.size.h, s_fill);
 }
 
+void graphics_context_set_stroke_width(GContext *ctx, uint8_t width) {
+  s_stroke_w = width < 1 ? 1 : width;
+}
+
+void graphics_draw_line(GContext *ctx, GPoint from, GPoint to) {
+  thick_line(from.x, from.y, to.x, to.y, s_stroke);
+}
+
 void graphics_draw_rect(GContext *ctx, GRect r) {
-  line(r.origin.x, r.origin.y, r.origin.x + r.size.w - 1, r.origin.y, s_stroke);
-  line(r.origin.x, r.origin.y + r.size.h - 1,
-       r.origin.x + r.size.w - 1, r.origin.y + r.size.h - 1, s_stroke);
-  line(r.origin.x, r.origin.y, r.origin.x, r.origin.y + r.size.h - 1, s_stroke);
-  line(r.origin.x + r.size.w - 1, r.origin.y,
-       r.origin.x + r.size.w - 1, r.origin.y + r.size.h - 1, s_stroke);
+  int x1 = r.origin.x + r.size.w - 1, y1 = r.origin.y + r.size.h - 1;
+  thick_line(r.origin.x, r.origin.y, x1, r.origin.y, s_stroke);
+  thick_line(r.origin.x, y1, x1, y1, s_stroke);
+  thick_line(r.origin.x, r.origin.y, r.origin.x, y1, s_stroke);
+  thick_line(x1, r.origin.y, x1, y1, s_stroke);
+}
+
+void graphics_draw_round_rect(GContext *ctx, GRect r, uint16_t radius) {
+  graphics_draw_rect(ctx, r);   // close enough to judge weight and placement
 }
 
 void graphics_fill_circle(GContext *ctx, GPoint c, uint16_t radius) {
@@ -181,10 +201,10 @@ void gpath_draw_outline(GContext *ctx, GPath *path) {
   int n = (int)path->info->num_points;
   for (int i = 0; i < n; i++) {
     int j = (i + 1) % n;
-    line(path->info->points[i].x + path->offset.x,
-         path->info->points[i].y + path->offset.y,
-         path->info->points[j].x + path->offset.x,
-         path->info->points[j].y + path->offset.y, s_stroke);
+    thick_line(path->info->points[i].x + path->offset.x,
+               path->info->points[i].y + path->offset.y,
+               path->info->points[j].x + path->offset.x,
+               path->info->points[j].y + path->offset.y, s_stroke);
   }
 }
 

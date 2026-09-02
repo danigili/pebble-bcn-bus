@@ -15,13 +15,15 @@ a favorites o treure-la. Funciona igual hi hagis arribat com hi hagis arribat.
 
 ## L'arrencada
 
-En obrir l'app, un autobús entra en escena i frena fins a la parada. Està
-dibuixat amb `GPath`, és a dir amb traçats vectorials definits al codi, no amb
-imatges: així es veu net a qualsevol pantalla i no cal cap recurs binari.
+En obrir l'app, un autobús travessa la pantalla de banda a banda. Està dibuixat
+amb `GPath`, és a dir amb traçats vectorials definits al codi i no amb imatges,
+i amb traç gruixut i colors plans com la resta de la interfície del rellotge.
+Els traçats s'escalen a l'amplada de la pantalla en carregar, de manera que
+omple igual de bé un Basalt de 144 px que un Emery de 200.
 
 ![L'animació d'arrencada](docs/splash.png)
 
-Dura un segon i mig i **qualsevol botó se la salta**.
+Dura poc més d'un segon i **qualsevol botó se la salta**.
 
 ## Credencials
 
