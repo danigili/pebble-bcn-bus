@@ -9,7 +9,7 @@
 #include <string.h>
 #include <time.h>
 
-typedef struct { uint8_t argb; } GColor;
+typedef struct { uint32_t rgb; } GColor;
 typedef struct { int16_t x, y; } GPoint;
 typedef struct { int16_t w, h; } GSize;
 typedef struct { GPoint origin; GSize size; } GRect;
@@ -29,7 +29,7 @@ typedef struct GContext GContext;
 typedef struct Layer Layer;
 typedef struct Window Window;
 typedef struct MenuLayer MenuLayer;
-typedef struct GFont_ *GFont;
+typedef const char *GFont;
 typedef struct AppTimer AppTimer;
 typedef struct GBitmap GBitmap;
 
@@ -136,6 +136,36 @@ int persist_write_data(uint32_t key, const void *data, size_t size);
 #define MESSAGE_KEY_PAYLOAD 4
 #define MESSAGE_KEY_TITLE 5
 #define MESSAGE_KEY_LANG 6
+
+typedef struct { uint32_t num_points; GPoint *points; } GPathInfo;
+typedef struct GPath GPath;
+GPath *gpath_create(const GPathInfo *info);
+void gpath_destroy(GPath *path);
+void gpath_move_to(GPath *path, GPoint offset);
+void gpath_draw_filled(GContext *ctx, GPath *path);
+void gpath_draw_outline(GContext *ctx, GPath *path);
+
+typedef struct Animation Animation;
+typedef uint32_t AnimationProgress;
+#define ANIMATION_NORMALIZED_MAX 65535
+typedef enum { AnimationCurveLinear, AnimationCurveEaseIn, AnimationCurveEaseOut,
+               AnimationCurveEaseInOut } AnimationCurve;
+typedef struct {
+  void (*setup)(Animation *);
+  void (*update)(Animation *, const AnimationProgress);
+  void (*teardown)(Animation *);
+} AnimationImplementation;
+typedef struct {
+  void (*started)(Animation *, void *);
+  void (*stopped)(Animation *, bool, void *);
+} AnimationHandlers;
+Animation *animation_create(void);
+void animation_set_duration(Animation *animation, uint32_t ms);
+void animation_set_curve(Animation *animation, AnimationCurve curve);
+void animation_set_implementation(Animation *animation, const AnimationImplementation *impl);
+void animation_set_handlers(Animation *animation, AnimationHandlers handlers, void *context);
+bool animation_schedule(Animation *animation);
+bool animation_unschedule(Animation *animation);
 
 #if defined(PBL_TOUCH)
 typedef struct Recognizer Recognizer;

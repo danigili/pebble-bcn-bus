@@ -118,3 +118,8 @@ void win_keypad_push(void);
 void   ui_theme_menu(MenuLayer *menu);
 GColor ui_line_color(const char *line);
 GColor ui_accent(void);
+GColor ui_road(void);
+
+// ------------------------------------------------------- win_splash.c
+
+void win_splash_push(void);

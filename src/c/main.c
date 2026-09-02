@@ -3,7 +3,7 @@
 static void init(void) {
   favs_load();
   comm_init();
-  win_main_push();
+  win_splash_push();
 }
 
 static void deinit(void) {
