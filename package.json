@@ -35,12 +35,10 @@
     "messageKeys": [
       "CMD",
       "STOP_CODE",
-      "LINE",
       "MSG_TYPE",
       "PAYLOAD",
       "TITLE",
-      "LANG",
-      "NEARBY"
+      "LANG"
     ],
     "resources": {
       "media": []
