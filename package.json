@@ -1,0 +1,49 @@
+{
+  "name": "bcnbus",
+  "version": "1.0.0",
+  "private": true,
+  "keywords": [
+    "pebble-app",
+    "bus",
+    "barcelona",
+    "tmb",
+    "ibus"
+  ],
+  "author": "dgl1147",
+  "license": "MIT",
+  "dependencies": {},
+  "pebble": {
+    "displayName": "BCN Bus",
+    "uuid": "85ecd1f3-56f8-421c-93ee-f2738fe11e89",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "basalt",
+      "chalk",
+      "diorite",
+      "emery"
+    ],
+    "watchapp": {
+      "watchface": false,
+      "hiddenApp": false,
+      "onlyShownOnCommunication": false
+    },
+    "capabilities": [
+      "configurable",
+      "location"
+    ],
+    "messageKeys": [
+      "CMD",
+      "STOP_CODE",
+      "LINE",
+      "MSG_TYPE",
+      "PAYLOAD",
+      "TITLE",
+      "LANG",
+      "NEARBY"
+    ],
+    "resources": {
+      "media": []
+    }
+  }
+}

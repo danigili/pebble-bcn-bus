@@ -1,0 +1,10 @@
+# Pebble SDK build output
+build/
+*.pbw
+
+# Node
+node_modules/
+
+# Editor / OS noise
+.DS_Store
+*.swp
