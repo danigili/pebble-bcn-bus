@@ -17,10 +17,11 @@ static const char *const s_strings[T_STR_COUNT][LANG_COUNT] = {
   { "Desada",           "Guardada",          "Saved"           },  // T_ADDED
   { "Esborrada",        "Borrada",           "Removed"         },  // T_REMOVED
   { "Codi de parada",   "Código parada","Stop code"       },  // T_STOP_CODE
-  { "Fes servir els botons", "Usa los botones", "Use the buttons" }, // T_USE_BUTTONS
-  { "Amunt/Avall: xifra\nSelecciona: seguent\nMante: cerca",
-    "Arriba/Abajo: cifra\nSelecciona: siguiente\nManten: buscar",
-    "Up/Down: digit\nSelect: next\nHold: search" },              // T_BTN_LEGEND
+  { "Mantén central: cerca", "Mantén central: buscar",
+    "Hold Select: search" },                                    // T_HOLD_SEARCH
+  { "Amunt/Avall: xifra\nCentral: xifra nova",
+    "Arriba/Abajo: cifra\nCentral: nueva cifra",
+    "Up/Down: digit\nSelect: new digit" },                       // T_BTN_LEGEND
   { "Sense mòbil", "Sin móvil",    "No phone"        },  // T_NO_PHONE
   { "Favorites plenes", "Favoritas llenas",  "Favourites full" },  // T_FAV_FULL
   { "Mantén per desar", "Mantén para guardar", "Hold to save" }, // T_HOLD_TO_SAVE

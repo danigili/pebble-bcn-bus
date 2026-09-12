@@ -49,17 +49,26 @@ static void mark_dirty(void) {
 
 // ------------------------------------------------------------- drawing
 
+// Typing a code is obvious; accepting it is not, since there is no OK key to
+// press. So the hold comes first, big and in the accent colour, and the two
+// everyday keys sit under it in small type. Both boxes have room for a
+// second line, because the same sentence is longer in Spanish than English.
 static void draw_button_hint(GContext *ctx, GRect bounds) {
-  graphics_context_set_text_color(ctx, GColorBlack);
-  graphics_draw_text(ctx, i18n(T_USE_BUTTONS),
-                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                     GRect(6, DISPLAY_H + 8, bounds.size.w - 12, 24),
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+  int inset = PBL_IF_ROUND_ELSE(22, 6);
+  int y = DISPLAY_H + 8;
 
+  graphics_context_set_text_color(ctx, ui_accent());
+  graphics_draw_text(ctx, i18n(T_HOLD_SEARCH),
+                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                     GRect(inset, y, bounds.size.w - inset * 2, 46),
+                     GTextOverflowModeFill, GTextAlignmentCenter, NULL);
+
+  y += 48;
+  graphics_context_set_text_color(ctx, GColorBlack);
   graphics_draw_text(ctx, i18n(T_BTN_LEGEND),
                      fonts_get_system_font(FONT_KEY_GOTHIC_14),
-                     GRect(10, DISPLAY_H + 34, bounds.size.w - 20,
-                           bounds.size.h - DISPLAY_H - 38),
+                     GRect(inset + 4, y, bounds.size.w - (inset + 4) * 2,
+                           bounds.size.h - y - 4),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
 }
 

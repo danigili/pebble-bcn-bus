@@ -65,8 +65,9 @@ allotjament ni cap dependència de npm.
 
 Tota l'app va amb botons, també el teclat numèric: amunt i avall canvien la
 xifra (mantenint-los, gira sola), el central avança a la següent, i
-mantenir-lo cerca. Enrere esborra l'última xifra i, si només en queda una,
-surt de la pantalla. No es fa servir la pantalla tàctil enlloc.
+**mantenir premut el central cerca** — no hi ha cap tecla d'acceptar, així
+que la pantalla ho diu en gran. Enrere esborra l'última xifra i, si només en
+queda una, surt de la pantalla. No es fa servir la pantalla tàctil enlloc.
 
 ## Provar els canvis
 
@@ -87,7 +88,8 @@ que **les crides reals a l'API de TMB funcionen**, credencials incloses.
     pebble install --emulator emery
 
 Els botons del rellotge es mapegen al teclat: `Q` enrere, `W` amunt, `S`
-central, `X` avall (o les fletxes).
+central, `X` avall (o les fletxes). Per mantenir premut un botó, mantén la
+tecla: per cercar un codi, deixa `S` premuda mig segon.
 
 Per tocar l'idioma, el radi de cerca o les favorites, amb **l'app oberta a
 l'emulador**, executa en una altra terminal:
