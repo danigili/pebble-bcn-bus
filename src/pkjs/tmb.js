@@ -123,10 +123,13 @@ function findStop(json, code) {
   return parades[0] || null;
 }
 
+// Rounded down, the way TMB rounds: its own t-in-min calls 596 seconds nine
+// minutes, not ten. It is also the honest direction — "22 min" means you
+// have at least that long, never less.
 function minutesUntil(arrival, now) {
   var at = toMillis(arrival);
   if (at === null) return null;
-  var mins = Math.round((at - now) / 60000);
+  var mins = Math.floor((at - now) / 60000);
   return mins < 0 ? 0 : mins;   // a bus that is overdue is arriving, not late
 }
 

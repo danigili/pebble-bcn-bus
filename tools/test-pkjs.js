@@ -33,6 +33,29 @@ function truthy(name, value) {
 
 console.log('\nparseArrivals');
 
+// A live answer from /itransit/bus/parades/1178, kept verbatim: three lines,
+// two buses each, one of them run by another AMB operator.
+var live = {"timestamp":1789244386957,"parades":[{"codi_parada":"1178","nom_parada":"Pont del Treball - Santander","linies_trajectes":[{"id_operador":2,"transit_namespace":"bus","codi_linia":229,"nom_linia":"V29","id_sentit":2,"codi_trajecte":"2291","desti_trajecte":"Diagonal Mar","propers_busos":[{"temps_arribada":1789244569000,"id_bus":7812,"info_bus":{"accessibilitat":{"estat_rampa":"SENSE_INCIDENCIA"}}},{"temps_arribada":1789245737000,"id_bus":7813,"info_bus":{"accessibilitat":{"estat_rampa":"SENSE_INCIDENCIA"}}}]},{"id_operador":2,"transit_namespace":"bus","codi_linia":231,"nom_linia":"V31","id_sentit":2,"codi_trajecte":"2311","desti_trajecte":"Fòrum","propers_busos":[{"temps_arribada":1789245059000,"id_bus":4636},{"temps_arribada":1789246199000,"id_bus":4637}]},{"id_operador":6,"transit_namespace":"amb","codi_linia":"B24","nom_linia":"B24","id_sentit":2,"codi_trajecte":"B24-Badalona","desti_trajecte":"Badalona","propers_busos":[{"temps_arribada":1789245773000},{"temps_arribada":1789246746000}]}]}]};
+
+check('the live answer, line by line and bus by bus',
+      TMB.parseArrivals(live, '1178').map(function (a) {
+        return a.line + ':' + a.mins;
+      }),
+      ['V29:3', 'V31:11', 'V29:22', 'B24:23', 'V31:30', 'B24:39']);
+check('every line keeps both of its buses',
+      TMB.parseArrivals(live, '1178').filter(function (a) {
+        return a.line === 'V31';
+      }).length, 2);
+check('the destination comes from desti_trajecte',
+      TMB.parseArrivals(live, '1178')[0].dest, 'Diagonal Mar');
+check('the stop names itself', TMB.pickStopName(live, '1178'),
+      'Pont del Treball - Santander');
+// 1350043 ms is 22 minutes and a half. TMB would call that 22.
+check('a waiting time is rounded down, not up',
+      TMB.parseArrivals(live, '1178')[2].mins, 22);
+check('a line run by another AMB operator is a line like any other',
+      TMB.parseArrivals(live, '1178')[3].line, 'B24');
+
 // The older /ibus/stops answer, copied from that endpoint: one entry per
 // line, the waiting time already worked out, and no stop name in it. Still
 // read, as a fallback.
@@ -81,8 +104,9 @@ var ibus = {
 
 var arrivals = TMB.parseArrivals(ibus, '108');
 check('every bus gets its own row, not every line', arrivals.length, 2);
+// 47884 ms is 48 seconds: that bus is pulling in, not a minute away.
 check('waiting times come from the absolute timestamps',
-      arrivals.map(function (a) { return a.mins; }), [1, 15]);
+      arrivals.map(function (a) { return a.mins; }), [0, 14]);
 check('the line is the name on the stop sign, not the internal code',
       arrivals[0].line, 'H12');
 check('destination read from desti_trajecte', arrivals[0].dest, 'Gornal');
@@ -155,13 +179,13 @@ check('arrival times quoted as strings still count',
       TMB.parseArrivals({ timestamp: '1744273964116', parades: [{
         codi_parada: '108', linies_trajectes: [{ nom_linia: 'H12',
           propers_busos: [{ temps_arribada: '1744274012000' }] }] }] },
-        '108')[0].mins, 1);
+        '108')[0].mins, 0);
 
 check('epochs in seconds are read as seconds',
       TMB.parseArrivals({ timestamp: 1744273964, parades: [{
         codi_parada: '108', linies_trajectes: [{ nom_linia: 'H12',
           propers_busos: [{ temps_arribada: 1744274612 }] }] }] },
-        '108')[0].mins, 11);
+        '108')[0].mins, 10);
 
 check('a response wrapped in a data envelope still parses',
       TMB.parseArrivals({ timestamp: 0, data: { parades: [{
