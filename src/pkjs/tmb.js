@@ -161,6 +161,7 @@ var OLD_MIN_KEYS  = ['t-in-min', 'tInMin', 'temps_min', 'minutes'];
 var OLD_SEC_KEYS  = ['t-in-s', 'tInS', 'temps_s', 'seconds'];
 var OLD_DEST_KEYS = ['destination', 'desti', 'desti_trajecte', 'headsign'];
 var OLD_NAME_KEYS = ['NOM_PARADA', 'nom_parada', 'nom', 'name'];
+var OLD_AT_KEYS   = ['temps_arribada', 'TEMPS_ARRIBADA', 'tempsArribada'];
 
 function firstNumber(obj, keys) {
   for (var i = 0; i < keys.length; i++) {
@@ -194,8 +195,50 @@ function fromIbus(json) {
   return out;
 }
 
+// Every other service in this API answers in GeoJSON, so iBus may too: one
+// feature per bus, everything in its properties, and a line with two buses
+// coming simply appearing twice. The field names are not documented for
+// this shape, so the plausible ones are tried — both a waiting time already
+// worked out and an absolute arrival time.
+function fromFeatures(json) {
+  var features = listOf(json && json.features);
+  var out = [];
+
+  for (var i = 0; i < features.length; i++) {
+    var props = (features[i] && features[i].properties) || {};
+
+    var line = sanitize(firstString(props, OLD_LINE_KEYS));
+    if (!line) continue;
+
+    var mins = firstNumber(props, OLD_MIN_KEYS);
+    if (mins === null) {
+      var seconds = firstNumber(props, OLD_SEC_KEYS);
+      if (seconds !== null) mins = Math.round(seconds / 60);
+    }
+    if (mins === null) {
+      var at = null;
+      for (var k = 0; k < OLD_AT_KEYS.length && at === null; k++) {
+        at = toMillis(props[OLD_AT_KEYS[k]]);
+      }
+      if (at !== null) {
+        var stamp = toMillis(json && json.timestamp);
+        mins = minutesUntil(at, stamp === null ? Date.now() : stamp);
+      }
+    }
+    if (mins === null || mins < 0) mins = -1;
+
+    var dest = sanitize(firstString(props, OLD_DEST_KEYS));
+    out.push({ line: line, mins: mins, dest: dest.substring(0, MAX_DEST) });
+  }
+  return out;
+}
+
+// Three shapes have to be allowed for, so each is tried in turn and the
+// first that yields anything wins: the one the documentation describes, the
+// GeoJSON one the rest of the API uses, and the older flat one.
 function parseArrivals(json, code) {
   var out = fromParades(json, code);
+  if (out.length === 0) out = fromFeatures(json);
   if (out.length === 0) out = fromIbus(json);
 
   out.sort(function (a, b) {
@@ -266,6 +309,13 @@ function nearestStops(index, lat, lon, radius, limit) {
 function pickStopName(json, code) {
   var stop = findStop(json, code);
   if (stop) return sanitize(stop.nom_parada);
+
+  var features = listOf(json && json.features);
+  if (features.length) {
+    var props = features[0].properties || {};
+    var named = sanitize(firstString(props, OLD_NAME_KEYS));
+    if (named) return named;
+  }
 
   var raw = listOf(json && json.data && json.data.ibus);
   return raw.length ? sanitize(firstString(raw[0], OLD_NAME_KEYS)) : '';

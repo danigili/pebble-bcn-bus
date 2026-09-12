@@ -161,6 +161,39 @@ check('the stop name too, from the older shape',
       TMB.pickStopName({ data: { ibus: [{ NOM_PARADA: 'Pl Espanya' }] } }, '366'),
       'Pl Espanya');
 
+// Every bus inside propers_busos counts, however many there are: this is
+// where a line's second bus lives.
+var threeDeep = TMB.parseArrivals({ timestamp: 0, parades: [{
+  codi_parada: '365',
+  linies_trajectes: [{ nom_linia: 'V31', desti_trajecte: 'Pont del Treball',
+    propers_busos: [
+      { temps_arribada: 8 * 60000, id_bus: 1 },
+      { temps_arribada: 23 * 60000, id_bus: 2 },
+      { temps_arribada: 41 * 60000, id_bus: 3 }
+    ] }]
+}] }, '365');
+check('every bus inside a line comes out',
+      threeDeep.map(function (a) { return a.mins; }), [8, 23, 41]);
+
+// The same line can appear as more than one trajecte; they all belong to it.
+check('a line split across trajectes keeps all its buses',
+      TMB.parseArrivals({ timestamp: 0, parades: [{ codi_parada: '365',
+        linies_trajectes: [
+          { nom_linia: 'V31', propers_busos: [{ temps_arribada: 8 * 60000 }] },
+          { nom_linia: 'V31', propers_busos: [{ temps_arribada: 23 * 60000 }] }
+        ] }] }, '365').length, 2);
+
+// TMB answers in GeoJSON everywhere else, so that shape is tried too: one
+// feature per bus, and a line with two coming appears twice.
+var asFeatures = TMB.parseArrivals({ timestamp: 1000000, features: [
+  { properties: { routeId: 'V31', 't-in-min': 8, destination: 'Pont del Treball' } },
+  { properties: { routeId: 'V33', 't-in-s': 190, desti: 'Barceloneta' } },
+  { properties: { routeId: 'V31', temps_arribada: 1000000 + 23 * 60000 } }
+] }, '365');
+check('a GeoJSON answer is read as one bus per feature',
+      asFeatures.map(function (a) { return a.line + ':' + a.mins; }),
+      ['V33:3', 'V31:8', 'V31:23']);
+
 check('empty response is handled', TMB.parseArrivals({}, '366'), []);
 check('null response is handled', TMB.parseArrivals(null, '366'), []);
 check('a stop the answer does not mention yields nothing',
