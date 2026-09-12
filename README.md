@@ -12,9 +12,10 @@ Tres maneres d'arribar a una parada, i una sola manera de desar-la:
 
 En clicar una parada s'obre la seva llista: totes les línies que hi passen,
 ordenades per qui arriba abans. **Seleccionant-ne una** s'obre el detall
-d'aquella línia: **els dos propers autobusos, en dues files** i en gran, amb
-el color de la línia, cap on va i a quina parada els esperes. Totes dues
-pantalles es refresquen soles cada 30 s.
+d'aquella línia: **els dos propers autobusos**, en una línia i en gran
+—`8 min · 23 min`—, amb el color de la línia, cap on va i a quina parada els
+esperes. Si el servei només en coneix un, ho diu. Totes dues pantalles es
+refresquen soles cada 30 s.
 
 Des de la pantalla d'una parada, **mantén premut el botó central** per desar-la
 a favorites o treure-la. Funciona igual hi hagis arribat com hi hagis arribat.

@@ -108,18 +108,22 @@ static void draw_header(GContext *ctx, GRect bounds, int y) {
 }
 
 // "8 min", or the word for a bus pulling in, or "--" with no estimate.
-static void format_minutes(const Arrival *arrival, char *out, size_t cap,
-                           const char **font) {
-  *font = FONT_KEY_GOTHIC_28_BOLD;
+// Written into one of two buffers in turn, so both can be joined in one go.
+static const char *minutes_of(const Arrival *arrival) {
+  static char s_text[2][20];
+  static int s_turn;
+
+  char *out = s_text[s_turn];
+  s_turn = (s_turn + 1) % 2;
 
   if (arrival->mins < 0) {
-    str_copy(out, "--", cap);
+    str_copy(out, "--", sizeof(s_text[0]));
   } else if (arrival->mins == 0) {
-    str_copy(out, i18n(T_ARRIVING), cap);
-    *font = FONT_KEY_GOTHIC_24_BOLD;
+    str_copy(out, i18n(T_ARRIVING), sizeof(s_text[0]));
   } else {
-    snprintf(out, cap, "%d %s", arrival->mins, i18n(T_MIN));
+    snprintf(out, sizeof(s_text[0]), "%d %s", arrival->mins, i18n(T_MIN));
   }
+  return out;
 }
 
 static void layer_update(Layer *layer, GContext *ctx) {
@@ -146,31 +150,38 @@ static void layer_update(Layer *layer, GContext *ctx) {
     return;
   }
 
-  int row_h = body_h / SHOWN_BUSES;
+  // Both times on one line -- "8 min \u00b7 23 min" -- so whether the one
+  // after next shows up never depends on a second row drawing.
+  char shown[48];
+  str_copy(shown, minutes_of(next[0]), sizeof(shown));
 
-  // Both rows are always drawn. When the service only knows of one bus, the
-  // second says so: an empty half screen reads as a broken app, and this is
-  // the difference between "no data" and "no bus".
-  for (int i = 0; i < SHOWN_BUSES; i++) {
-    int row_y = body_y + i * row_h;
-    char minutes[16];
-    const char *font = FONT_KEY_GOTHIC_14;
-    const char *shown = i18n(T_NO_MORE);
+  if (count > 1) {
+    strncat(shown, " \u00b7 ", sizeof(shown) - strlen(shown) - 1);
+    strncat(shown, minutes_of(next[1]), sizeof(shown) - strlen(shown) - 1);
+  }
 
-    if (i < count) {
-      format_minutes(next[i], minutes, sizeof(minutes), &font);
-      shown = minutes;
-    }
+  // "8 min \u00b7 23 min" is about 150 px of Gothic 24 and a Basalt is 144
+  // wide, so with two of them on a narrow screen the type gives way rather
+  // than the second number.
+  const char *font = FONT_KEY_GOTHIC_28_BOLD;
+  if (count > 1) {
+    font = (bounds.size.w >= 180) ? FONT_KEY_GOTHIC_24_BOLD
+                                  : FONT_KEY_GOTHIC_18_BOLD;
+  }
 
-    if (i > 0) {
-      graphics_context_set_stroke_color(ctx, GColorBlack);
-      graphics_draw_line(ctx, GPoint(6, row_y), GPoint(bounds.size.w - 6, row_y));
-    }
+  int text_y = body_y + (body_h - 40) / 2;
+  graphics_context_set_text_color(ctx, GColorBlack);
+  graphics_draw_text(ctx, shown, fonts_get_system_font(font),
+                     GRect(2, text_y, bounds.size.w - 4, 40),
+                     GTextOverflowModeFill, GTextAlignmentCenter, NULL);
 
-    graphics_context_set_text_color(ctx, GColorBlack);
-    graphics_draw_text(ctx, shown, fonts_get_system_font(font),
-                       GRect(4, row_y + (row_h - 34) / 2, bounds.size.w - 8, 38),
-                       GTextOverflowModeFill, GTextAlignmentCenter, NULL);
+  // Nothing behind it: say so, rather than leaving it to be wondered about.
+  if (count < 2) {
+    graphics_draw_text(ctx, i18n(T_NO_MORE),
+                       fonts_get_system_font(FONT_KEY_GOTHIC_14),
+                       GRect(4, text_y + 38, bounds.size.w - 8, 20),
+                       GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
+                       NULL);
   }
 }
 
