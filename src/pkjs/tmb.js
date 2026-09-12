@@ -16,11 +16,13 @@
  * the phone's clock: the two need not agree, and the server's is the one the
  * prediction was made against.
  *
- * Everything below is deliberately forgiving about how that arrives: numbers
- * quoted as strings, epochs in seconds, the whole thing wrapped in a "data"
- * envelope, and the older { data: { ibus: [...] } } shape, which some
- * deployments still answer with. Reading a live response from here is not
- * possible, so the parser accepts what it is given rather than insisting.
+ * Two shapes are read. The one the service actually answers with is flat —
+ * { data: { ibus: [ one entry per bus ] } }, with the waiting time already
+ * worked out — and is tried first. The one TMB documents nests the buses
+ * inside each line of each stop, and is tried second in case an endpoint
+ * somewhere answers that way; it is where temps_arribada and propers_busos
+ * come in, and those are absolute times, so there a wait is a subtraction
+ * against the response's own timestamp rather than the phone's clock.
  *
  * The stops endpoint is a different matter: it is GeoJSON, documented, and
  * has no way to ask for what is near a point. See buildStopsUrl.
@@ -154,14 +156,22 @@ function fromParades(json, code) {
   return out;
 }
 
-// The older shape, kept as a fallback: one flat entry per line, carrying the
-// waiting time already worked out.
-var OLD_LINE_KEYS = ['line', 'routeId', 'route', 'nom_linia', 'linia'];
-var OLD_MIN_KEYS  = ['t-in-min', 'tInMin', 'temps_min', 'minutes'];
-var OLD_SEC_KEYS  = ['t-in-s', 'tInS', 'temps_s', 'seconds'];
-var OLD_DEST_KEYS = ['destination', 'desti', 'desti_trajecte', 'headsign'];
-var OLD_NAME_KEYS = ['NOM_PARADA', 'nom_parada', 'nom', 'name'];
-var OLD_AT_KEYS   = ['temps_arribada', 'TEMPS_ARRIBADA', 'tempsArribada'];
+// What the service actually answers with, read off the live endpoint:
+//
+//   {"status":"success","data":{"ibus":[
+//     {"line":"V23","routeId":"2230","destination":"Can Marcet",
+//      "t-in-min":5,"t-in-s":323,"text-ca":"5 min"}]}}
+//
+// One entry per bus, with the waiting time already worked out. "line" is
+// what the stop sign says ("V23"); "routeId" is TMB's internal number for
+// it ("2230"), which is no use to anyone waiting. iBus reports the buses it
+// is actually tracking, so a line appears once per bus on its way — often
+// just the one.
+var IBUS_LINE_KEYS = ['line', 'nom_linia', 'route', 'routeId'];
+var IBUS_MIN_KEYS  = ['t-in-min', 'tInMin', 'temps_min', 'minutes'];
+var IBUS_SEC_KEYS  = ['t-in-s', 'tInS', 'temps_s', 'seconds'];
+var IBUS_DEST_KEYS = ['destination', 'desti', 'desti_trajecte', 'headsign'];
+var IBUS_NAME_KEYS = ['NOM_PARADA', 'nom_parada', 'nom', 'name'];
 
 function firstNumber(obj, keys) {
   for (var i = 0; i < keys.length; i++) {
@@ -179,67 +189,31 @@ function fromIbus(json) {
     var item = raw[i];
     if (!item) continue;
 
-    var line = sanitize(firstString(item, OLD_LINE_KEYS));
+    var line = sanitize(firstString(item, IBUS_LINE_KEYS));
     if (!line) continue;
 
-    var mins = firstNumber(item, OLD_MIN_KEYS);
+    // t-in-min is the service's own figure and the one its "9 min" text
+    // agrees with, so it wins. Recomputing it from t-in-s would round 596
+    // seconds up to ten minutes and disagree with every other screen TMB
+    // puts that bus on. Seconds only stand in when minutes are missing.
+    var mins = firstNumber(item, IBUS_MIN_KEYS);
     if (mins === null) {
-      var seconds = firstNumber(item, OLD_SEC_KEYS);
-      if (seconds !== null) mins = Math.round(seconds / 60);
+      var seconds = firstNumber(item, IBUS_SEC_KEYS);
+      if (seconds !== null) mins = Math.floor(seconds / 60);
     }
     if (mins === null || mins < 0) mins = -1;
 
-    var dest = sanitize(firstString(item, OLD_DEST_KEYS));
+    var dest = sanitize(firstString(item, IBUS_DEST_KEYS));
     out.push({ line: line, mins: mins, dest: dest.substring(0, MAX_DEST) });
   }
   return out;
 }
 
-// Every other service in this API answers in GeoJSON, so iBus may too: one
-// feature per bus, everything in its properties, and a line with two buses
-// coming simply appearing twice. The field names are not documented for
-// this shape, so the plausible ones are tried — both a waiting time already
-// worked out and an absolute arrival time.
-function fromFeatures(json) {
-  var features = listOf(json && json.features);
-  var out = [];
-
-  for (var i = 0; i < features.length; i++) {
-    var props = (features[i] && features[i].properties) || {};
-
-    var line = sanitize(firstString(props, OLD_LINE_KEYS));
-    if (!line) continue;
-
-    var mins = firstNumber(props, OLD_MIN_KEYS);
-    if (mins === null) {
-      var seconds = firstNumber(props, OLD_SEC_KEYS);
-      if (seconds !== null) mins = Math.round(seconds / 60);
-    }
-    if (mins === null) {
-      var at = null;
-      for (var k = 0; k < OLD_AT_KEYS.length && at === null; k++) {
-        at = toMillis(props[OLD_AT_KEYS[k]]);
-      }
-      if (at !== null) {
-        var stamp = toMillis(json && json.timestamp);
-        mins = minutesUntil(at, stamp === null ? Date.now() : stamp);
-      }
-    }
-    if (mins === null || mins < 0) mins = -1;
-
-    var dest = sanitize(firstString(props, OLD_DEST_KEYS));
-    out.push({ line: line, mins: mins, dest: dest.substring(0, MAX_DEST) });
-  }
-  return out;
-}
-
-// Three shapes have to be allowed for, so each is tried in turn and the
-// first that yields anything wins: the one the documentation describes, the
-// GeoJSON one the rest of the API uses, and the older flat one.
+// The live shape first, the documented one second: they are different, and
+// the service answers with the first.
 function parseArrivals(json, code) {
-  var out = fromParades(json, code);
-  if (out.length === 0) out = fromFeatures(json);
-  if (out.length === 0) out = fromIbus(json);
+  var out = fromIbus(json);
+  if (out.length === 0) out = fromParades(json, code);
 
   out.sort(function (a, b) {
     if (a.mins < 0 && b.mins < 0) return 0;
@@ -310,15 +284,10 @@ function pickStopName(json, code) {
   var stop = findStop(json, code);
   if (stop) return sanitize(stop.nom_parada);
 
-  var features = listOf(json && json.features);
-  if (features.length) {
-    var props = features[0].properties || {};
-    var named = sanitize(firstString(props, OLD_NAME_KEYS));
-    if (named) return named;
-  }
-
+  // The live answer carries no stop name at all, so this usually comes back
+  // empty and the name the watch already has is the one that shows.
   var raw = listOf(json && json.data && json.data.ibus);
-  return raw.length ? sanitize(firstString(raw[0], OLD_NAME_KEYS)) : '';
+  return raw.length ? sanitize(firstString(raw[0], IBUS_NAME_KEYS)) : '';
 }
 
 // Everything travels in one string with a size limit, and the watch keeps a

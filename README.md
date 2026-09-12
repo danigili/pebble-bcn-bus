@@ -162,13 +162,24 @@ porta l'emulador al navegador sense instal·lar res.
 
 ## Coses pendents de verificar
 
-Res d'això s'ha pogut provar contra l'API de debò —la màquina on s'ha escrit
-no hi arriba—, així que el lector de la resposta d'iBus és tolerant a
-propòsit: accepta els temps com a número o com a text, l'epoch en segons o
-en mil·lisegons, la resposta al nivell de dalt o dins d'un embolcall `data`,
-i encara entén la forma antiga (`data.ibus`) per si el servei la torna. Si
-tot i així no en surt cap bus, el mòbil escriu la resposta al log
-(`pebble logs`), que és la manera d'acabar de lligar-ho.
+La resposta d'iBus és aquesta, llegida de l'endpoint mateix:
+
+    {"status":"success","data":{"ibus":[
+      {"line":"V23","routeId":"2230","destination":"Can Marcet",
+       "t-in-min":5,"t-in-s":323,"text-ca":"5 min"}]}}
+
+**Una entrada per bus**, amb els minuts ja calculats. `line` és el que diu
+el pal de la parada (`V23`); `routeId` és el número intern de TMB (`2230`).
+Els minuts es fan servir tal com vénen: recalcular-los de `t-in-s` faria que
+596 segons es veiessin com a 10 min quan TMB en diu 9 a tot arreu.
+
+Compte amb una cosa: **iBus informa dels busos que té localitzats**, no de
+l'horari. Sovint això és un sol bus per línia, i llavors el detall d'una
+línia no pot mostrar-ne dos perquè el segon no existeix a la resposta. Quan
+en té dos localitzats, la línia hi surt dues vegades i surten tots dos.
+
+La resposta no porta el nom de la parada enlloc: el que es veu és el que ja
+té el rellotge, de les favorites o de la cerca per GPS.
 
 El camí d'iBus, en canvi, ja està escrit contra la resposta de debò: temps
 d'arribada absoluts dins de `parades[].linies_trajectes[].propers_busos[]`,

@@ -33,6 +33,28 @@ function truthy(name, value) {
 
 console.log('\nparseArrivals');
 
+// The live answer, copied from the endpoint itself. One entry per bus, the
+// waiting time already worked out, and no stop name anywhere in it.
+var live = { status: 'success', data: { ibus: [
+  { destination: 'Can Marcet', line: 'V23', routeId: '2230',
+    't-in-min': 5, 't-in-s': 323, 'text-ca': '5 min' },
+  { destination: 'Montbau', line: 'V21', routeId: '2210',
+    't-in-min': 9, 't-in-s': 596, 'text-ca': '9 min' }
+] } };
+
+check('the live shape is read as it comes', TMB.parseArrivals(live, '365'),
+      [{ line: 'V23', mins: 5, dest: 'Can Marcet' },
+       { line: 'V21', mins: 9, dest: 'Montbau' }]);
+check('the line is the one on the stop sign, not routeId',
+      TMB.parseArrivals(live, '365')[0].line, 'V23');
+// 596 seconds is 9.93 minutes. TMB says nine, and so does its own text.
+check('the minutes are the service own, not recomputed from the seconds',
+      TMB.parseArrivals(live, '365')[1].mins, 9);
+check('seconds stand in only when minutes are missing',
+      TMB.parseArrivals({ data: { ibus: [{ line: 'H6', 't-in-s': 200 }] } },
+                        '365')[0].mins, 3);
+check('no stop name comes with it', TMB.pickStopName(live, '365'), '');
+
 // The shape the service really answers with, kept verbatim from a live
 // response so the parser is tested against the thing and not a sketch of it.
 var ibus = {
@@ -146,20 +168,20 @@ check('a response wrapped in a data envelope still parses',
           propers_busos: [{ temps_arribada: 8 * 60000 }] }] }] } },
         '108')[0].mins, 8);
 
-// Some deployments answer with the older flat shape, where the waiting time
-// comes already worked out.
-var legacy = TMB.parseArrivals({ data: { ibus: [
-  { routeId: '59', 't-in-min': 12, desti: 'Poble Sec' },
-  { routeId: 'H12', 't-in-s': 190, destination: 'Gorg' },
-  { routeId: 'V15' }
-] } }, '366');
-check('the older shape is read when the current one finds nothing',
-      legacy.map(function (a) { return a.line; }), ['H12', '59', 'V15']);
-check('and its waiting times come through', legacy[0].mins, 3);
-check('with no estimate at all sorting last, as -1', legacy[2].mins, -1);
-check('the stop name too, from the older shape',
-      TMB.pickStopName({ data: { ibus: [{ NOM_PARADA: 'Pl Espanya' }] } }, '366'),
-      'Pl Espanya');
+// iBus lists a bus, not a line: when it is tracking two of the same line,
+// the line comes back twice and both are kept.
+var twice = TMB.parseArrivals({ data: { ibus: [
+  { line: 'V23', 't-in-min': 5, destination: 'Can Marcet' },
+  { line: 'V21', 't-in-min': 9, destination: 'Montbau' },
+  { line: 'V23', 't-in-min': 21, destination: 'Can Marcet' }
+] } }, '365');
+check('a line tracked twice arrives twice',
+      twice.map(function (a) { return a.line + ':' + a.mins; }),
+      ['V23:5', 'V21:9', 'V23:21']);
+check('an entry with no time at all sorts last, as -1',
+      TMB.parseArrivals({ data: { ibus: [
+        { line: 'V15' }, { line: 'V23', 't-in-min': 5 } ] } }, '365')[1].mins,
+      -1);
 
 // Every bus inside propers_busos counts, however many there are: this is
 // where a line's second bus lives.
@@ -182,17 +204,6 @@ check('a line split across trajectes keeps all its buses',
           { nom_linia: 'V31', propers_busos: [{ temps_arribada: 8 * 60000 }] },
           { nom_linia: 'V31', propers_busos: [{ temps_arribada: 23 * 60000 }] }
         ] }] }, '365').length, 2);
-
-// TMB answers in GeoJSON everywhere else, so that shape is tried too: one
-// feature per bus, and a line with two coming appears twice.
-var asFeatures = TMB.parseArrivals({ timestamp: 1000000, features: [
-  { properties: { routeId: 'V31', 't-in-min': 8, destination: 'Pont del Treball' } },
-  { properties: { routeId: 'V33', 't-in-s': 190, desti: 'Barceloneta' } },
-  { properties: { routeId: 'V31', temps_arribada: 1000000 + 23 * 60000 } }
-] }, '365');
-check('a GeoJSON answer is read as one bus per feature',
-      asFeatures.map(function (a) { return a.line + ':' + a.mins; }),
-      ['V33:3', 'V31:8', 'V31:23']);
 
 check('empty response is handled', TMB.parseArrivals({}, '366'), []);
 check('null response is handled', TMB.parseArrivals(null, '366'), []);
