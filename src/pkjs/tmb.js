@@ -271,25 +271,40 @@ function pickStopName(json, code) {
   return raw.length ? sanitize(firstString(raw[0], OLD_NAME_KEYS)) : '';
 }
 
-// Everything travels in one string, and the watch keeps a fixed number of
-// arrivals, so the budget is spent per line rather than first come first
-// served: one busy line with a long tail of buses used to push every other
-// line's second bus off the end.
+// Everything travels in one string with a size limit, and the watch keeps a
+// fixed number of arrivals, so what gets left out matters.
+//
+// Sorted purely by time, the message fills up with whatever is soonest, and
+// at a stop with a dozen lines that is the first bus of each of them plus
+// the tail of the two or three earliest. Every other line loses its second
+// bus, which is exactly what a line's detail screen goes looking for.
+//
+// So they go out by rank instead: every line's next bus, then every line's
+// one after that, then the thirds. Within a rank the soonest goes first,
+// which is the order they arrive in.
 function encodeArrivals(arrivals) {
-  var parts = [];
-  var length = 0;
   var perLine = {};
+  var ranked = [];
 
   for (var i = 0; i < arrivals.length; i++) {
-    var a = arrivals[i];
-    var key = '#' + a.line;
-    var seen = (perLine[key] || 0) + 1;
-    if (seen > MAX_PER_LINE) continue;
+    var key = '#' + arrivals[i].line;
+    var rank = perLine[key] || 0;
+    perLine[key] = rank + 1;
+    if (rank >= MAX_PER_LINE) continue;   // nobody waits for a fourth
+    ranked.push({ arrival: arrivals[i], rank: rank, order: i });
+  }
 
+  ranked.sort(function (a, b) {
+    return (a.rank !== b.rank) ? a.rank - b.rank : a.order - b.order;
+  });
+
+  var parts = [];
+  var length = 0;
+
+  for (var j = 0; j < ranked.length; j++) {
+    var a = ranked[j].arrival;
     var record = a.line + '|' + a.mins + '|' + a.dest + ';';
     if (length + record.length > MAX_PAYLOAD) break;
-
-    perLine[key] = seen;
     parts.push(record);
     length += record.length;
   }

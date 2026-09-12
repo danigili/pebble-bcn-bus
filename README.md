@@ -65,10 +65,15 @@ respostes viatgen empaquetades en una sola cadena (`línia|minuts|destí;…`) e
 comptes d'una clau per camp.
 
 Aquesta cadena té un límit i el rellotge en guarda un nombre fix d'arribades,
-així que el mòbil hi reparteix el lloc **per línia**: com a molt tres busos de
-cadascuna. Altrament, en una parada amb moltes línies els primers busos de
-totes omplen el missatge i el detall d'una línia es queda sense el segon bus,
-que és precisament el que va a buscar.
+així que el que queda fora importa. Si s'omplís per ordre d'arribada, en una
+parada amb una dotzena de línies hi cabrien el primer bus de cadascuna i la
+cua de les dues o tres més primerenques: totes les altres perdrien el segon
+bus, que és precisament el que va a buscar el detall d'una línia.
+
+Per això s'omple **per rondes**: el proper bus de cada línia, després el
+següent de cada línia, i llavors els tercers. El rellotge els torna a
+ordenar per temps en rebre'ls, de manera que la llista de la parada es
+llegeix com un plafó de sortides.
 
 Les **favorites viuen al rellotge**, que n'és la font de veritat; el mòbil en
 guarda una còpia perquè es puguin editar des de la configuració. Per això
@@ -106,8 +111,10 @@ queda una, surt de la pantalla. No es fa servir la pantalla tàctil enlloc.
     ./tools/run-tests.sh
 
 Comprova el JavaScript del mòbil amb Node, i compila la lògica del rellotge
-per a l'ordinador contra uns *stubs* de `pebble.h` per verificar el parsing i
-les favorites. També comprova que el codi compila per a totes les plataformes.
+per a l'ordinador contra uns *stubs* de `pebble.h` per verificar el parsing,
+les favorites i el descodificador de missatges —aquest darrer incloent
+`comm.c` en comptes d'enllaçar-lo, per poder provar el codi de debò i no una
+còpia. També comprova que el codi compila per a totes les plataformes.
 No substitueix provar-ho al rellotge, però atrapa el que es pot atrapar sense
 maquinari.
 

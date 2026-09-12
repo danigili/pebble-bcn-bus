@@ -177,6 +177,19 @@ function countLines(arrivals) {
   return count;
 }
 
+// A line's detail screen shows its next two buses, so a response where no
+// line has a second one is either a quiet stop or a shape we are reading
+// wrong. Only the response itself can tell those apart.
+function anyLineHasTwo(arrivals) {
+  var seen = {};
+  for (var i = 0; i < arrivals.length; i++) {
+    var key = '#' + arrivals[i].line;
+    if (seen[key]) return true;
+    seen[key] = true;
+  }
+  return false;
+}
+
 function handleTimes(code) {
   httpGet(TMB.buildIbusUrl(code), function (json) {
     // Prefer the name the user gave the stop, then whatever the API knows,
@@ -195,6 +208,11 @@ function handleTimes(code) {
     } else {
       console.log('stop ' + code + ': ' + arrivals.length + ' arrivals, ' +
                   countLines(arrivals) + ' lines');
+
+      if (!anyLineHasTwo(arrivals)) {
+        console.log('stop ' + code + ': not one line has a second bus; ' +
+                    'raw: ' + JSON.stringify(json).substring(0, 500));
+      }
     }
 
     send({

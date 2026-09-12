@@ -28,6 +28,26 @@ static void copy_payload(Tuple *tuple) {
   if (tuple != NULL) str_copy(s_payload, tuple->value->cstring, PAYLOAD_LEN);
 }
 
+// A bus with no estimate goes last, never first.
+static int wait_of(const Arrival *arrival) {
+  return (arrival->mins < 0) ? 100000 : arrival->mins;
+}
+
+// The phone chooses what fits in the message by line —every line's next bus
+// before anyone's second— so what arrives is not in time order. Put it back:
+// the list reads as a stop's departure board.
+static void sort_arrivals(void) {
+  for (int i = 1; i < g_arrival_count; i++) {
+    Arrival pending = g_arrivals[i];
+    int j = i - 1;
+    while (j >= 0 && wait_of(&g_arrivals[j]) > wait_of(&pending)) {
+      g_arrivals[j + 1] = g_arrivals[j];
+      j--;
+    }
+    g_arrivals[j + 1] = pending;
+  }
+}
+
 static void parse_arrivals(char *payload) {
   g_arrival_count = 0;
 
@@ -49,6 +69,8 @@ static void parse_arrivals(char *payload) {
     arrival->mins = (mins && mins[0]) ? atoi(mins) : -1;
     g_arrival_count++;
   }
+
+  sort_arrivals();
 }
 
 // Third field, where there is one, is how far away the stop is in metres.

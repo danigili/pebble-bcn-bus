@@ -18,6 +18,14 @@ cc -std=c11 -Wall -Wextra -Wno-unused-parameter \
 /tmp/bcnbus-test-c
 
 echo
+echo "== watch-side C: the payload decoder =="
+cc -std=c11 -Wall -Wextra -Wno-unused-parameter \
+   -Itools/stub -Isrc/c \
+   -o /tmp/bcnbus-test-comm \
+   tools/test-comm.c src/c/util.c src/c/favorites.c
+/tmp/bcnbus-test-comm
+
+echo
 echo "== watch-side C compiles for every target platform =="
 for flags in "-DPBL_COLOR -DPBL_TOUCH -DPBL_RECT" "-DPBL_BW -DPBL_RECT" "-DPBL_COLOR -DPBL_ROUND"; do
   cc -fsyntax-only -std=c11 -Wall -Wextra -Wno-unused-parameter \
