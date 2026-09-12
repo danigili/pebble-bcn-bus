@@ -144,9 +144,18 @@ function handleTimes(code) {
                TMB.pickStopName(json, code) ||
                (text('stop') + ' ' + code);
 
+    var arrivals = TMB.parseArrivals(json, code);
+
+    // A good answer we could make nothing of is worth seeing: this puts the
+    // shape in `pebble logs` instead of leaving it to be guessed at.
+    if (arrivals.length === 0) {
+      console.log('no arrivals parsed from: ' +
+                  JSON.stringify(json).substring(0, 300));
+    }
+
     send({
       MSG_TYPE: MSG_TIMES,
-      PAYLOAD: TMB.encodeArrivals(TMB.parseArrivals(json, code)),
+      PAYLOAD: TMB.encodeArrivals(arrivals),
       TITLE: TMB.sanitize(name).substring(0, 26)
     });
   }, function (status, message) {

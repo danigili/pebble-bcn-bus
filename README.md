@@ -132,7 +132,15 @@ porta l'emulador al navegador sense instal·lar res.
 
 ## Coses pendents de verificar
 
-Queda una part escrita sense poder provar-la contra l'API real:
+Res d'això s'ha pogut provar contra l'API de debò —la màquina on s'ha escrit
+no hi arriba—, així que el lector de la resposta d'iBus és tolerant a
+propòsit: accepta els temps com a número o com a text, l'epoch en segons o
+en mil·lisegons, la resposta al nivell de dalt o dins d'un embolcall `data`,
+i encara entén la forma antiga (`data.ibus`) per si el servei la torna. Si
+tot i així no en surt cap bus, el mòbil escriu la resposta al log
+(`pebble logs`), que és la manera d'acabar de lligar-ho.
+
+I queda una part escrita sense poder provar-la de cap manera:
 
 - **Les parades per GPS.** L'endpoint de parades accepta un filtre CQL, però
   no se n'ha pogut confirmar la sintaxi. Es proven dues formes, `DWITHIN` i

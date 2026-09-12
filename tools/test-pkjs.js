@@ -126,6 +126,41 @@ check('a missing destination is empty, not undefined',
         linies_trajectes: [{ nom_linia: 'H8',
           propers_busos: [{ temps_arribada: 60000 }] }] }] }, '1')[0].dest, '');
 
+// Reading a live response is not possible from a build machine, so the
+// parser takes the answer in whatever of these shapes it arrives.
+check('arrival times quoted as strings still count',
+      TMB.parseArrivals({ timestamp: '1744273964116', parades: [{
+        codi_parada: '108', linies_trajectes: [{ nom_linia: 'H12',
+          propers_busos: [{ temps_arribada: '1744274012000' }] }] }] },
+        '108')[0].mins, 1);
+
+check('epochs in seconds are read as seconds',
+      TMB.parseArrivals({ timestamp: 1744273964, parades: [{
+        codi_parada: '108', linies_trajectes: [{ nom_linia: 'H12',
+          propers_busos: [{ temps_arribada: 1744274612 }] }] }] },
+        '108')[0].mins, 11);
+
+check('a response wrapped in a data envelope still parses',
+      TMB.parseArrivals({ timestamp: 0, data: { parades: [{
+        codi_parada: '108', linies_trajectes: [{ nom_linia: 'H12',
+          propers_busos: [{ temps_arribada: 8 * 60000 }] }] }] } },
+        '108')[0].mins, 8);
+
+// Some deployments answer with the older flat shape, where the waiting time
+// comes already worked out.
+var legacy = TMB.parseArrivals({ data: { ibus: [
+  { routeId: '59', 't-in-min': 12, desti: 'Poble Sec' },
+  { routeId: 'H12', 't-in-s': 190, destination: 'Gorg' },
+  { routeId: 'V15' }
+] } }, '366');
+check('the older shape is read when the current one finds nothing',
+      legacy.map(function (a) { return a.line; }), ['H12', '59', 'V15']);
+check('and its waiting times come through', legacy[0].mins, 3);
+check('with no estimate at all sorting last, as -1', legacy[2].mins, -1);
+check('the stop name too, from the older shape',
+      TMB.pickStopName({ data: { ibus: [{ NOM_PARADA: 'Pl Espanya' }] } }, '366'),
+      'Pl Espanya');
+
 check('empty response is handled', TMB.parseArrivals({}, '366'), []);
 check('null response is handled', TMB.parseArrivals(null, '366'), []);
 check('a stop the answer does not mention yields nothing',

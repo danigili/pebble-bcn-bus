@@ -15,6 +15,12 @@
  * subtraction. It is measured against the response's own timestamp and not
  * the phone's clock: the two need not agree, and the server's is the one the
  * prediction was made against.
+ *
+ * Everything below is deliberately forgiving about how that arrives: numbers
+ * quoted as strings, epochs in seconds, the whole thing wrapped in a "data"
+ * envelope, and the older { data: { ibus: [...] } } shape, which some
+ * deployments still answer with. Reading a live response from here is not
+ * possible, so the parser accepts what it is given rather than insisting.
  */
 
 var BASE = 'https://api.tmb.cat/v1';
@@ -85,10 +91,35 @@ function listOf(value) {
   return Array.isArray(value) ? value : [value];
 }
 
+function toNumber(value) {
+  if (typeof value === 'number' && isFinite(value)) return value;
+  if (typeof value === 'string' && value !== '' && !isNaN(Number(value))) {
+    return Number(value);
+  }
+  return null;
+}
+
+// Epochs turn up in seconds as often as in milliseconds. 1e9 seconds is
+// 2001 and 1e11 is the year 5138, so a number in that band is seconds and
+// anything outside it is taken as it comes.
+function toMillis(value) {
+  var n = toNumber(value);
+  if (n === null) return null;
+  return (n >= 1e9 && n < 1e11) ? n * 1000 : n;
+}
+
+// The stops, wherever they are: at the root, or inside a "data" envelope.
+function paradesOf(json) {
+  if (!json) return [];
+  if (json.parades) return listOf(json.parades);
+  if (json.data && json.data.parades) return listOf(json.data.parades);
+  return [];
+}
+
 // The endpoint is asked about one stop, but it answers with a list, so pick
 // the stop that was asked for and fall back to whatever came back.
 function findStop(json, code) {
-  var parades = listOf(json && json.parades);
+  var parades = paradesOf(json);
   for (var i = 0; i < parades.length; i++) {
     if (parades[i] && String(parades[i].codi_parada) === String(code)) {
       return parades[i];
@@ -98,17 +129,18 @@ function findStop(json, code) {
 }
 
 function minutesUntil(arrival, now) {
-  if (typeof arrival !== 'number' || !isFinite(arrival)) return null;
-  var mins = Math.round((arrival - now) / 60000);
+  var at = toMillis(arrival);
+  if (at === null) return null;
+  var mins = Math.round((at - now) / 60000);
   return mins < 0 ? 0 : mins;   // a bus that is overdue is arriving, not late
 }
 
-function parseArrivals(json, code) {
+function fromParades(json, code) {
   var stop = findStop(json, code);
   if (!stop) return [];
 
-  var now = (json && typeof json.timestamp === 'number') ? json.timestamp
-                                                         : Date.now();
+  var stamp = toMillis(json && json.timestamp);
+  var now = (stamp === null) ? Date.now() : stamp;
   var trips = listOf(stop.linies_trajectes);
   var out = [];
 
@@ -131,8 +163,58 @@ function parseArrivals(json, code) {
       out.push({ line: line, mins: mins, dest: dest });
     }
   }
+  return out;
+}
 
-  out.sort(function (a, b) { return a.mins - b.mins; });
+// The older shape, kept as a fallback: one flat entry per line, carrying the
+// waiting time already worked out.
+var OLD_LINE_KEYS = ['line', 'routeId', 'route', 'nom_linia', 'linia'];
+var OLD_MIN_KEYS  = ['t-in-min', 'tInMin', 'temps_min', 'minutes'];
+var OLD_SEC_KEYS  = ['t-in-s', 'tInS', 'temps_s', 'seconds'];
+var OLD_DEST_KEYS = ['destination', 'desti', 'desti_trajecte', 'headsign'];
+
+function firstNumber(obj, keys) {
+  for (var i = 0; i < keys.length; i++) {
+    var value = toNumber(obj[keys[i]]);
+    if (value !== null) return value;
+  }
+  return null;
+}
+
+function fromIbus(json) {
+  var raw = listOf(json && json.data && json.data.ibus);
+  var out = [];
+
+  for (var i = 0; i < raw.length; i++) {
+    var item = raw[i];
+    if (!item) continue;
+
+    var line = sanitize(firstString(item, OLD_LINE_KEYS));
+    if (!line) continue;
+
+    var mins = firstNumber(item, OLD_MIN_KEYS);
+    if (mins === null) {
+      var seconds = firstNumber(item, OLD_SEC_KEYS);
+      if (seconds !== null) mins = Math.round(seconds / 60);
+    }
+    if (mins === null || mins < 0) mins = -1;
+
+    var dest = sanitize(firstString(item, OLD_DEST_KEYS));
+    out.push({ line: line, mins: mins, dest: dest.substring(0, MAX_DEST) });
+  }
+  return out;
+}
+
+function parseArrivals(json, code) {
+  var out = fromParades(json, code);
+  if (out.length === 0) out = fromIbus(json);
+
+  out.sort(function (a, b) {
+    if (a.mins < 0 && b.mins < 0) return 0;
+    if (a.mins < 0) return 1;        // no estimate: last, not first
+    if (b.mins < 0) return -1;
+    return a.mins - b.mins;
+  });
   return out;
 }
 
@@ -172,7 +254,10 @@ function parseNearby(json, lat, lon) {
 
 function pickStopName(json, code) {
   var stop = findStop(json, code);
-  return stop ? sanitize(stop.nom_parada) : '';
+  if (stop) return sanitize(stop.nom_parada);
+
+  var raw = listOf(json && json.data && json.data.ibus);
+  return raw.length ? sanitize(firstString(raw[0], NAME_KEYS)) : '';
 }
 
 function encodeArrivals(arrivals) {
