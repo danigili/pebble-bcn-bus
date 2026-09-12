@@ -148,11 +148,19 @@ static void layer_update(Layer *layer, GContext *ctx) {
 
   int row_h = body_h / SHOWN_BUSES;
 
-  for (int i = 0; i < count; i++) {
+  // Both rows are always drawn. When the service only knows of one bus, the
+  // second says so: an empty half screen reads as a broken app, and this is
+  // the difference between "no data" and "no bus".
+  for (int i = 0; i < SHOWN_BUSES; i++) {
     int row_y = body_y + i * row_h;
     char minutes[16];
-    const char *font;
-    format_minutes(next[i], minutes, sizeof(minutes), &font);
+    const char *font = FONT_KEY_GOTHIC_14;
+    const char *shown = i18n(T_NO_MORE);
+
+    if (i < count) {
+      format_minutes(next[i], minutes, sizeof(minutes), &font);
+      shown = minutes;
+    }
 
     if (i > 0) {
       graphics_context_set_stroke_color(ctx, GColorBlack);
@@ -160,7 +168,7 @@ static void layer_update(Layer *layer, GContext *ctx) {
     }
 
     graphics_context_set_text_color(ctx, GColorBlack);
-    graphics_draw_text(ctx, minutes, fonts_get_system_font(font),
+    graphics_draw_text(ctx, shown, fonts_get_system_font(font),
                        GRect(4, row_y + (row_h - 34) / 2, bounds.size.w - 8, 38),
                        GTextOverflowModeFill, GTextAlignmentCenter, NULL);
   }

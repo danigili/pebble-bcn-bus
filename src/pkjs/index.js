@@ -177,9 +177,22 @@ function countLines(arrivals) {
   return count;
 }
 
-// A line's detail screen shows its next two buses, so a response where no
-// line has a second one is either a quiet stop or a shape we are reading
-// wrong. Only the response itself can tell those apart.
+// A line's detail screen shows its next two buses, so how many buses each
+// line actually has is the whole question. This prints it: "V31x1 V33x2".
+function census(arrivals) {
+  var counts = {};
+  var order = [];
+
+  for (var i = 0; i < arrivals.length; i++) {
+    var key = '#' + arrivals[i].line;
+    if (!counts[key]) { counts[key] = 0; order.push(arrivals[i].line); }
+    counts[key]++;
+  }
+  return order.map(function (line) {
+    return line + 'x' + counts['#' + line];
+  }).join(' ');
+}
+
 function anyLineHasTwo(arrivals) {
   var seen = {};
   for (var i = 0; i < arrivals.length; i++) {
@@ -188,6 +201,15 @@ function anyLineHasTwo(arrivals) {
     seen[key] = true;
   }
   return false;
+}
+
+// Which of the two response shapes we read it out of, since that decides
+// whether a line can have more than one bus at all.
+function shapeOf(json) {
+  if (json && json.parades) return 'parades';
+  if (json && json.data && json.data.parades) return 'data.parades';
+  if (json && json.data && json.data.ibus) return 'data.ibus';
+  return 'unknown';
 }
 
 function handleTimes(code) {
@@ -206,8 +228,8 @@ function handleTimes(code) {
       console.log('no arrivals parsed from: ' +
                   JSON.stringify(json).substring(0, 300));
     } else {
-      console.log('stop ' + code + ': ' + arrivals.length + ' arrivals, ' +
-                  countLines(arrivals) + ' lines');
+      console.log('stop ' + code + ' [' + shapeOf(json) + ']: ' +
+                  census(arrivals));
 
       if (!anyLineHasTwo(arrivals)) {
         console.log('stop ' + code + ': not one line has a second bus; ' +

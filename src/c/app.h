@@ -60,7 +60,7 @@ typedef enum {
   T_FAVOURITES, T_NEARBY, T_BY_CODE, T_LOADING, T_NO_BUSES, T_ERROR,
   T_NO_FAVS, T_NO_NEARBY, T_ARRIVING, T_MIN, T_ADDED, T_REMOVED,
   T_STOP_CODE, T_HOLD_SEARCH, T_BTN_LEGEND, T_NO_PHONE, T_FAV_FULL, T_HOLD_TO_SAVE,
-  T_STOP, T_STR_COUNT
+  T_STOP, T_NO_MORE, T_STR_COUNT
 } StrId;
 
 // ------------------------------------------------------------- util.c

@@ -26,6 +26,7 @@ static const char *const s_strings[T_STR_COUNT][LANG_COUNT] = {
   { "Favorites plenes", "Favoritas llenas",  "Favourites full" },  // T_FAV_FULL
   { "Mantén per desar", "Mantén para guardar", "Hold to save" }, // T_HOLD_TO_SAVE
   { "Parada",           "Parada",            "Stop"            },  // T_STOP
+  { "Cap més previst",  "Ninguno más",       "No more yet"     },  // T_NO_MORE
 };
 
 const char *i18n(StrId id) {
