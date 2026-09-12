@@ -119,5 +119,8 @@ void win_keypad_push(void);
 // ---------------------------------------------------------------- ui.c
 
 void   ui_theme_menu(MenuLayer *menu);
+// Every window wears one, so the time is always on screen.
+StatusBarLayer *ui_status_bar_add(Window *window);
+GRect  ui_content_bounds(Window *window);
 GColor ui_line_color(const char *line);
 GColor ui_accent(void);

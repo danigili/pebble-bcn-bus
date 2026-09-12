@@ -19,6 +19,10 @@ pantalles es refresquen soles cada 30 s.
 Des de la pantalla d'una parada, **mantén premut el botó central** per desar-la
 a favorites o treure-la. Funciona igual hi hagis arribat com hi hagis arribat.
 
+**L'hora surt a dalt de totes les pantalles.** La dibuixa la barra d'estat del
+sistema (`StatusBarLayer`), o sigui que és el rellotge del rellotge, amb el
+format que hi tinguis posat, i l'app no n'ha de mantenir cap.
+
 ## Credencials
 
 Les credencials de l'API de TMB **venen incloses** a `src/pkjs/tmb.js`, així

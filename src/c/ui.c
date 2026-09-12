@@ -34,3 +34,22 @@ void ui_theme_menu(MenuLayer *menu) {
   menu_layer_set_normal_colors(menu, GColorWhite, GColorBlack);
   menu_layer_set_highlight_colors(menu, ui_accent(), GColorWhite);
 }
+
+// The time, on every screen. Pebble's own status bar draws it, so it is the
+// watch's clock in the watch's format and nothing here has to keep it.
+StatusBarLayer *ui_status_bar_add(Window *window) {
+  StatusBarLayer *bar = status_bar_layer_create();
+  status_bar_layer_set_colors(bar, GColorWhite, GColorBlack);
+  status_bar_layer_set_separator_mode(bar, StatusBarLayerSeparatorModeNone);
+  layer_add_child(window_get_root_layer(window), status_bar_layer_get_layer(bar));
+  return bar;
+}
+
+// What is left of the window once the status bar has had its strip. Layers
+// built from this keep drawing in their own coordinates, starting at zero.
+GRect ui_content_bounds(Window *window) {
+  GRect bounds = layer_get_bounds(window_get_root_layer(window));
+  bounds.origin.y += STATUS_BAR_LAYER_HEIGHT;
+  bounds.size.h -= STATUS_BAR_LAYER_HEIGHT;
+  return bounds;
+}

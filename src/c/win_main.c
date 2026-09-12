@@ -3,6 +3,7 @@
 enum { ROW_FAVS = 0, ROW_NEARBY, ROW_BY_CODE, ROW_COUNT };
 
 static Window    *s_window;
+static StatusBarLayer *s_status;
 static MenuLayer *s_menu;
 
 static uint16_t get_num_rows(MenuLayer *menu, uint16_t section, void *context) {
@@ -39,7 +40,7 @@ static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
 
 static void window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
-  s_menu = menu_layer_create(layer_get_bounds(root));
+  s_menu = menu_layer_create(ui_content_bounds(window));
   menu_layer_set_callbacks(s_menu, NULL, (MenuLayerCallbacks) {
     .get_num_rows = get_num_rows,
     .get_cell_height = get_cell_height,
@@ -52,9 +53,14 @@ static void window_load(Window *window) {
   menu_layer_set_center_focused(s_menu, true);
 #endif
   layer_add_child(root, menu_layer_get_layer(s_menu));
+
+  // Added last, so it stays over whatever the window draws.
+  s_status = ui_status_bar_add(window);
 }
 
 static void window_unload(Window *window) {
+  status_bar_layer_destroy(s_status);
+  s_status = NULL;
   menu_layer_destroy(s_menu);
   s_menu = NULL;
   window_destroy(window);

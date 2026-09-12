@@ -15,6 +15,7 @@
 // them by line rather than asking for anything new.
 
 static Window     *s_window;
+static StatusBarLayer *s_status;
 static Layer      *s_layer;
 static CommHandler s_prev_handler;
 static Stop        s_stop;
@@ -123,7 +124,7 @@ static void format_minutes(const Arrival *arrival, char *out, size_t cap,
 
 static void layer_update(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
-  int header_y = PBL_IF_ROUND_ELSE(22, 0);
+  int header_y = PBL_IF_ROUND_ELSE(8, 0);   // the status bar already took the top
   int body_y = header_y + HEADER_H;
   int body_h = bounds.size.h - body_y - PBL_IF_ROUND_ELSE(12, 0);
 
@@ -189,9 +190,12 @@ static void on_message(int msg_type) {
 
 static void window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
-  s_layer = layer_create(layer_get_bounds(root));
+  s_layer = layer_create(ui_content_bounds(window));
   layer_set_update_proc(s_layer, layer_update);
   layer_add_child(root, s_layer);
+
+  // Added last, so it stays over whatever the window draws.
+  s_status = ui_status_bar_add(window);
 
   window_set_click_config_provider(window, click_config);
 
@@ -206,6 +210,8 @@ static void window_unload(Window *window) {
   s_refresh_timer = NULL;
 
   comm_set_handler(s_prev_handler);
+  status_bar_layer_destroy(s_status);
+  s_status = NULL;
   layer_destroy(s_layer);
   s_layer = NULL;
   window_destroy(window);

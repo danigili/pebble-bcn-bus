@@ -4,6 +4,7 @@
 // only in where the stops come from and whether they need loading.
 
 static Window     *s_window;
+static StatusBarLayer *s_status;
 static MenuLayer  *s_menu;
 static CommHandler s_prev_handler;
 static bool        s_nearby_mode;
@@ -91,7 +92,7 @@ static void on_message(int msg_type) {
 
 static void window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
-  s_menu = menu_layer_create(layer_get_bounds(root));
+  s_menu = menu_layer_create(ui_content_bounds(window));
   menu_layer_set_callbacks(s_menu, NULL, (MenuLayerCallbacks) {
     .get_num_rows = get_num_rows,
     .get_cell_height = get_cell_height,
@@ -107,6 +108,9 @@ static void window_load(Window *window) {
 #endif
   layer_add_child(root, menu_layer_get_layer(s_menu));
 
+  // Added last, so it stays over whatever the window draws.
+  s_status = ui_status_bar_add(window);
+
   s_prev_handler = comm_set_handler(on_message);
 }
 
@@ -118,6 +122,8 @@ static void window_appear(Window *window) {
 
 static void window_unload(Window *window) {
   comm_set_handler(s_prev_handler);
+  status_bar_layer_destroy(s_status);
+  s_status = NULL;
   menu_layer_destroy(s_menu);
   s_menu = NULL;
   window_destroy(window);

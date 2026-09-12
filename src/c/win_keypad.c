@@ -4,6 +4,7 @@
 #define DISPLAY_H   48
 
 static Window   *s_window;
+static StatusBarLayer *s_status;
 static Layer    *s_layer;
 static char      s_code[MAX_DIGITS + 1];
 static int       s_len;
@@ -150,9 +151,12 @@ static void click_config(void *context) {
 
 static void window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
-  s_layer = layer_create(layer_get_bounds(root));
+  s_layer = layer_create(ui_content_bounds(window));
   layer_set_update_proc(s_layer, layer_update);
   layer_add_child(root, s_layer);
+
+  // Added last, so it stays over whatever the window draws.
+  s_status = ui_status_bar_add(window);
 
   // Start on a digit so Up and Down have something to turn right away.
   if (s_len == 0) append_digit('0');
@@ -163,6 +167,8 @@ static void window_unload(Window *window) {
   if (s_submit_timer != NULL) app_timer_cancel(s_submit_timer);
   s_submit_timer = NULL;
 
+  status_bar_layer_destroy(s_status);
+  s_status = NULL;
   layer_destroy(s_layer);
   s_layer = NULL;
   window_destroy(window);

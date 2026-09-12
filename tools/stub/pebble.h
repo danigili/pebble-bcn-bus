@@ -60,6 +60,18 @@ Layer *window_get_root_layer(const Window *window);
 void window_set_click_config_provider(Window *window, void (*provider)(void *));
 
 typedef enum { BUTTON_ID_BACK, BUTTON_ID_UP, BUTTON_ID_SELECT, BUTTON_ID_DOWN } ButtonId;
+#define STATUS_BAR_LAYER_HEIGHT 16
+typedef struct StatusBarLayer StatusBarLayer;
+typedef enum { StatusBarLayerSeparatorModeNone,
+               StatusBarLayerSeparatorModeDotted } StatusBarLayerSeparatorMode;
+StatusBarLayer *status_bar_layer_create(void);
+void status_bar_layer_destroy(StatusBarLayer *bar);
+Layer *status_bar_layer_get_layer(StatusBarLayer *bar);
+void status_bar_layer_set_colors(StatusBarLayer *bar, GColor background,
+                                 GColor foreground);
+void status_bar_layer_set_separator_mode(StatusBarLayer *bar,
+                                         StatusBarLayerSeparatorMode mode);
+
 typedef void *ClickRecognizerRef;
 typedef void (*ClickHandler)(ClickRecognizerRef, void *);
 void window_single_click_subscribe(ButtonId id, ClickHandler handler);
