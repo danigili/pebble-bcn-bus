@@ -2,19 +2,14 @@
 
 #define REFRESH_MS 30000
 #define TOAST_MS    1500
-#define HEADER_H      36
-#define SHOWN_ROWS     2   // the next two buses, and only those
+#define HEADER_H      24
 
 // Every way of finding a stop lands here, so this is the one place that
 // knows how to add or drop a favourite: short press refreshes, long press
 // toggles.
-//
-// The screen answers one question — when is the next bus — so it shows the
-// two soonest arrivals in two big rows rather than a list to scroll. The
-// phone already sorts them by waiting time, so they are the first two.
 
 static Window     *s_window;
-static Layer      *s_layer;
+static MenuLayer  *s_menu;
 static CommHandler s_prev_handler;
 static Stop        s_stop;
 static DataState   s_state;
@@ -25,7 +20,7 @@ static char        s_toast[24];
 static void request_times(void);
 
 static void mark_dirty(void) {
-  if (s_layer != NULL) layer_mark_dirty(s_layer);
+  if (s_menu != NULL) layer_mark_dirty(menu_layer_get_layer(s_menu));
 }
 
 static void toast_expired(void *data) {
@@ -47,7 +42,7 @@ static void refresh_timer_cb(void *data) {
 }
 
 static void request_times(void) {
-  // Keep showing the previous times while refreshing, so the screen does not
+  // Keep showing the previous times while refreshing, so the list does not
   // blink back to "loading" every half minute.
   if (g_arrival_count == 0) s_state = DS_LOADING;
 
@@ -56,7 +51,7 @@ static void request_times(void) {
   if (s_refresh_timer != NULL) app_timer_cancel(s_refresh_timer);
   s_refresh_timer = app_timer_register(REFRESH_MS, refresh_timer_cb, NULL);
 
-  mark_dirty();
+  if (s_menu != NULL) menu_layer_reload_data(s_menu);
 }
 
 static bool showing_status(void) {
@@ -71,86 +66,63 @@ static const char *status_text(void) {
   }
 }
 
-static int shown_rows(void) {
-  return (g_arrival_count < SHOWN_ROWS) ? g_arrival_count : SHOWN_ROWS;
+static uint16_t get_num_rows(MenuLayer *menu, uint16_t section, void *context) {
+  return showing_status() ? 1 : g_arrival_count;
 }
 
-// ------------------------------------------------------------- drawing
-
-// "8 min", or the word for a bus pulling in, or "--" when the API gave us
-// no estimate at all. The unit is spelled out: this is the one number on
-// the screen and it should read like a sentence, not like a stopwatch.
-static void format_minutes(const Arrival *arrival, char *out, size_t cap,
-                           const char **font) {
-  *font = FONT_KEY_GOTHIC_24_BOLD;
-
-  if (arrival->mins < 0) {
-    str_copy(out, "--", cap);
-  } else if (arrival->mins == 0) {
-    str_copy(out, i18n(T_ARRIVING), cap);
-    *font = FONT_KEY_GOTHIC_18_BOLD;
-  } else {
-    snprintf(out, cap, "%d %s", arrival->mins, i18n(T_MIN));
-  }
+static int16_t get_cell_height(MenuLayer *menu, MenuIndex *index, void *context) {
+#ifdef PBL_ROUND
+  return menu_layer_is_index_selected(menu, index) ? 60 : 42;
+#else
+  return 44;
+#endif
 }
 
-static void draw_header(GContext *ctx, GRect bounds, int y) {
-  GRect band = GRect(0, y, bounds.size.w, HEADER_H);
-  // The band can bleed into the bezel, but nothing written on it may: on a
-  // round watch the ends of these two lines are outside the glass.
-  int inset = PBL_IF_ROUND_ELSE(30, 4);
-  int text_w = bounds.size.w - inset * 2;
+static int16_t get_header_height(MenuLayer *menu, uint16_t section, void *context) {
+  return HEADER_H;
+}
+
+static void draw_header(GContext *ctx, const Layer *cell, uint16_t section,
+                        void *context) {
+  GRect bounds = layer_get_bounds(cell);
+  bool is_fav = favs_contains(s_stop.code);
 
   graphics_context_set_fill_color(ctx, ui_accent());
-  graphics_fill_rect(ctx, band, 0, GCornerNone);
-  graphics_context_set_text_color(ctx, GColorWhite);
+  graphics_fill_rect(ctx, bounds, 0, GCornerNone);
 
+  graphics_context_set_text_color(ctx, GColorWhite);
   graphics_draw_text(ctx, s_toast[0] ? s_toast : s_stop.name,
                      fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
-                     GRect(inset, y - 2, text_w - 16, 18),
+                     GRect(4, -2, bounds.size.w - 22, bounds.size.h),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 
   // A filled dot marks a saved stop: no font is guaranteed to carry a star.
-  if (favs_contains(s_stop.code)) {
+  if (is_fav) {
     graphics_context_set_fill_color(ctx, GColorWhite);
-    graphics_fill_circle(ctx, GPoint(bounds.size.w - inset - 7, y + 9), 4);
-  }
-
-  // The code, unless the stop has no name of its own and is already showing
-  // it. Whatever else is arriving is counted on the right, so dropping down
-  // to two rows never hides buses without saying so.
-  char line[NAME_LEN + 12];
-  if (strcmp(s_stop.name, s_stop.code) == 0) {
-    line[0] = '\0';
-  } else {
-    snprintf(line, sizeof(line), "%s %s", i18n(T_STOP), s_stop.code);
-  }
-  graphics_draw_text(ctx, line, fonts_get_system_font(FONT_KEY_GOTHIC_14),
-                     GRect(inset, y + 15, text_w - 32, 18),
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
-
-  int hidden = g_arrival_count - shown_rows();
-  if (hidden > 0) {
-    char more[12];
-    snprintf(more, sizeof(more), "+%d", hidden);
-    graphics_draw_text(ctx, more, fonts_get_system_font(FONT_KEY_GOTHIC_14),
-                       GRect(bounds.size.w - inset - 30, y + 15, 30, 18),
-                       GTextOverflowModeFill, GTextAlignmentRight, NULL);
+    graphics_fill_circle(ctx, GPoint(bounds.size.w - 11, bounds.size.h / 2), 4);
   }
 }
 
-static void draw_arrival(GContext *ctx, GRect row, const Arrival *arrival) {
+static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index,
+                     void *context) {
+  GRect bounds = layer_get_bounds(cell);
+  bool selected = menu_layer_is_index_selected(s_menu, index);
+  GColor text_color = selected ? GColorWhite : GColorBlack;
+
+  if (showing_status()) {
+    graphics_context_set_text_color(ctx, text_color);
+    graphics_draw_text(ctx, status_text(),
+                       fonts_get_system_font(FONT_KEY_GOTHIC_18),
+                       GRect(6, (bounds.size.h - 24) / 2, bounds.size.w - 12, 24),
+                       GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+    return;
+  }
+
+  const Arrival *arrival = &g_arrivals[index->row];
+
   const int badge_w = 46;
   const int badge_h = 24;
-  int pad = PBL_IF_ROUND_ELSE(26, 5);
-  bool roomy = row.size.h >= 52 && arrival->dest[0] != '\0';
-  // Centre the badge-and-destination block in the row: on a tall Emery the
-  // rows are half the screen each, and hanging the content off the top left
-  // a hole under every bus.
-  int content_h = roomy ? 44 : badge_h;
-  int top = row.origin.y + (row.size.h - content_h) / 2;
-
-  GRect badge = GRect(row.origin.x + pad, top, badge_w, badge_h);
+  GRect badge = GRect(4, (bounds.size.h - badge_h) / 2, badge_w, badge_h);
   graphics_context_set_fill_color(ctx, ui_line_color(arrival->line));
   graphics_fill_rect(ctx, badge, 4, GCornersAll);
   graphics_context_set_text_color(ctx, GColorWhite);
@@ -160,71 +132,38 @@ static void draw_arrival(GContext *ctx, GRect row, const Arrival *arrival) {
                      GTextOverflowModeFill, GTextAlignmentCenter, NULL);
 
   char minutes[16];
-  const char *font;
-  format_minutes(arrival, minutes, sizeof(minutes), &font);
+  const char *minutes_font = FONT_KEY_GOTHIC_24_BOLD;
+  if (arrival->mins < 0) {
+    str_copy(minutes, "--", sizeof(minutes));
+  } else if (arrival->mins == 0) {
+    str_copy(minutes, i18n(T_ARRIVING), sizeof(minutes));
+    minutes_font = FONT_KEY_GOTHIC_14_BOLD;
+  } else {
+    snprintf(minutes, sizeof(minutes), "%d'", arrival->mins);
+  }
 
-  int right_x = badge.origin.x + badge_w + 4;
-  graphics_context_set_text_color(ctx, GColorBlack);
-  graphics_draw_text(ctx, minutes, fonts_get_system_font(font),
-                     GRect(right_x, top - 3,
-                           row.origin.x + row.size.w - pad - right_x, 30),
+  const int right_w = 58;
+  graphics_context_set_text_color(ctx, text_color);
+  graphics_draw_text(ctx, minutes, fonts_get_system_font(minutes_font),
+                     GRect(bounds.size.w - right_w - 4,
+                           (bounds.size.h - 26) / 2, right_w, 26),
                      GTextOverflowModeFill, GTextAlignmentRight, NULL);
 
-  if (roomy) {
-    // Kept clear of the bezel: this is the lowest line on the screen, and on
-    // a round watch the corners of the bottom row are the first to go.
-    int dest_pad = PBL_IF_ROUND_ELSE(38, pad);
+  int dest_x = badge_w + 10;
+  int dest_w = bounds.size.w - dest_x - right_w - 6;
+  if (dest_w > 10 && arrival->dest[0] != '\0') {
     graphics_draw_text(ctx, arrival->dest,
                        fonts_get_system_font(FONT_KEY_GOTHIC_14),
-                       GRect(row.origin.x + dest_pad, top + 26,
-                             row.size.w - dest_pad * 2, 18),
-                       GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
-                       NULL);
+                       GRect(dest_x, (bounds.size.h - 20) / 2, dest_w, 20),
+                       GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
   }
 }
 
-static void layer_update(Layer *layer, GContext *ctx) {
-  GRect bounds = layer_get_bounds(layer);
-  int header_y = PBL_IF_ROUND_ELSE(26, 0);
-  int body_y = header_y + HEADER_H;
-  int body_h = bounds.size.h - body_y - PBL_IF_ROUND_ELSE(14, 0);
-
-  graphics_context_set_fill_color(ctx, GColorWhite);
-  graphics_fill_rect(ctx, bounds, 0, GCornerNone);
-
-  draw_header(ctx, bounds, header_y);
-
-  if (showing_status()) {
-    graphics_context_set_text_color(ctx, GColorBlack);
-    graphics_draw_text(ctx, status_text(),
-                       fonts_get_system_font(FONT_KEY_GOTHIC_18),
-                       GRect(8, body_y + (body_h - 26) / 2, bounds.size.w - 16, 26),
-                       GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
-                       NULL);
-    return;
-  }
-
-  int rows = shown_rows();
-  int row_h = body_h / SHOWN_ROWS;
-
-  for (int i = 0; i < rows; i++) {
-    GRect row = GRect(0, body_y + i * row_h, bounds.size.w, row_h);
-    if (i > 0) {
-      graphics_context_set_stroke_color(ctx, GColorBlack);
-      graphics_draw_line(ctx, GPoint(row.origin.x + 6, row.origin.y),
-                         GPoint(row.origin.x + row.size.w - 6, row.origin.y));
-    }
-    draw_arrival(ctx, row, &g_arrivals[i]);
-  }
-}
-
-// -------------------------------------------------------------- buttons
-
-static void select_click(ClickRecognizerRef ref, void *context) {
+static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
   request_times();
 }
 
-static void select_long_click(ClickRecognizerRef ref, void *context) {
+static void select_long_click(MenuLayer *menu, MenuIndex *index, void *context) {
   if (favs_contains(s_stop.code)) {
     favs_remove(s_stop.code);
     toast(i18n(T_REMOVED));
@@ -234,15 +173,8 @@ static void select_long_click(ClickRecognizerRef ref, void *context) {
   vibes_short_pulse();
 }
 
-static void click_config(void *context) {
-  window_single_click_subscribe(BUTTON_ID_SELECT, select_click);
-  window_long_click_subscribe(BUTTON_ID_SELECT, 500, select_long_click, NULL);
-}
-
-// --------------------------------------------------------------- window
-
 static void on_message(int msg_type) {
-  if (s_layer == NULL) return;
+  if (s_menu == NULL) return;
 
   switch (msg_type) {
     case MSG_TIMES:
@@ -260,16 +192,27 @@ static void on_message(int msg_type) {
     default:
       return;
   }
-  mark_dirty();
+  menu_layer_reload_data(s_menu);
 }
 
 static void window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
-  s_layer = layer_create(layer_get_bounds(root));
-  layer_set_update_proc(s_layer, layer_update);
-  layer_add_child(root, s_layer);
-
-  window_set_click_config_provider(window, click_config);
+  s_menu = menu_layer_create(layer_get_bounds(root));
+  menu_layer_set_callbacks(s_menu, NULL, (MenuLayerCallbacks) {
+    .get_num_rows = get_num_rows,
+    .get_cell_height = get_cell_height,
+    .get_header_height = get_header_height,
+    .draw_header = draw_header,
+    .draw_row = draw_row,
+    .select_click = select_click,
+    .select_long_click = select_long_click,
+  });
+  ui_theme_menu(s_menu);
+  menu_layer_set_click_config_onto_window(s_menu, window);
+#ifdef PBL_ROUND
+  menu_layer_set_center_focused(s_menu, true);
+#endif
+  layer_add_child(root, menu_layer_get_layer(s_menu));
 
   s_prev_handler = comm_set_handler(on_message);
   request_times();
@@ -283,8 +226,8 @@ static void window_unload(Window *window) {
   s_toast[0] = '\0';
 
   comm_set_handler(s_prev_handler);
-  layer_destroy(s_layer);
-  s_layer = NULL;
+  menu_layer_destroy(s_menu);
+  s_menu = NULL;
   window_destroy(window);
   s_window = NULL;
 }

@@ -10,11 +10,15 @@ Tres maneres d'arribar a una parada, i una sola manera de desar-la:
 - **A prop meu** — busca parades per GPS.
 - **Cercar per codi** — tecleja el codi imprès al pal de la parada.
 
-En clicar una parada s'obre la seva pantalla: el nom i el codi a dalt, i a
-sota **els dos propers autobusos en dues files** —línia, quants minuts falten
-i cap on va—, que és el que vols saber sense haver de llegir res més. Si n'hi
-ha més en camí, la capçalera ho diu amb un `+3`. El central refresca i es
-refresca sol cada 30 s.
+En clicar una parada s'obre una pantalla amb **els dos propers autobusos en
+dues files**, una línia per bus: el dorsal de la línia, cap on va i quants
+minuts falten. A dalt, el nom i el codi de la parada; si n'hi ha més en camí,
+la capçalera ho diu amb un `+3`. El destí només hi cap a les pantalles amples
+—a l'Emery—; on no hi cap, cedeix el lloc a la línia i als minuts.
+
+**El central o avall** obren la llista sencera de la parada, amb totes les
+línies, que es recorre amb els botons com sempre. Totes dues pantalles es
+refresquen soles cada 30 s.
 
 Des de la pantalla d'una parada, **mantén premut el botó central** per desar-la
 a favorites o treure-la. Funciona igual hi hagis arribat com hi hagis arribat.

@@ -73,7 +73,7 @@ static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
   if (showing_status()) return;
 
   const Stop *stop = item_at(index->row);
-  if (stop != NULL) win_stop_push(stop);
+  if (stop != NULL) win_next_push(stop);
 }
 
 static void on_message(int msg_type) {

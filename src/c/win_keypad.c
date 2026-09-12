@@ -22,7 +22,7 @@ static void submit_cb(void *data) {
   // Push the stop first, then drop the keypad out of the stack, so Back
   // from the times screen goes straight home instead of back to the keypad.
   Window *keypad = s_window;
-  win_stop_push(&stop);
+  win_next_push(&stop);
   if (keypad != NULL) window_stack_remove(keypad, false);
 }
 
