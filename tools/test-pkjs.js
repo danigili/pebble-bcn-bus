@@ -224,43 +224,55 @@ truthy('the app ships with credentials', !!TMB.APP_ID && !!TMB.APP_KEY);
 check('ibus url', TMB.buildIbusUrl('366'),
       'https://api.tmb.cat/v1/ibus/stops/366?' + auth);
 
-// Neither the predicate nor the case of the geometry column has ever been
-// confirmed against the live service, so every combination gets a turn and
-// each carries the name that the log will print.
-var urls = TMB.buildNearbyUrls(41.3874, 2.1686, 500);
-check('every combination of predicate and column is tried', urls.length, 4);
-check('each one is named for the log',
-      urls.map(function (u) { return u.name; }),
-      ['DWITHIN/GEOMETRIA', 'BBOX/GEOMETRIA', 'DWITHIN/geometria',
-       'BBOX/geometria']);
-truthy('the distance filter goes first, in the case the properties use',
-       decodeURIComponent(urls[0].url).indexOf(
-           'DWITHIN(GEOMETRIA,POINT(2.1686 41.3874),500,meters)') > 0);
-truthy('the bounding box is built around the fix',
-       decodeURIComponent(urls[1].url).indexOf('BBOX(GEOMETRIA,2.16') > 0);
-truthy('credentials travel on all of them',
-       urls.every(function (u) { return u.url.indexOf(auth) > 0; }));
+check('stops url', TMB.buildStopsUrl(),
+      'https://api.tmb.cat/v1/transit/parades?' + auth);
 
-console.log('\nparseNearby');
+console.log('\nstop index');
 
-var geo = { features: [
-  { properties: { CODI_PARADA: '1122', NOM_PARADA: 'Lluny' },
-    geometry: { coordinates: [2.1750, 41.3900] } },
-  { properties: { CODI_PARADA: '366', NOM_PARADA: 'A prop' },
-    geometry: { coordinates: [2.1687, 41.3875] } },
-  { properties: { NOM_PARADA: 'Sense codi' },
-    geometry: { coordinates: [2.1687, 41.3875] } }
+// The documented shape: GeoJSON, EPSG:4326, longitude first.
+var geo = { type: 'FeatureCollection', totalFeatures: 3, features: [
+  { type: 'Feature',
+    geometry: { type: 'Point', coordinates: [2.148751, 41.374565] },
+    properties: { CODI_PARADA: 2775, NOM_PARADA: 'Pl Espanya',
+                  DESC_PARADA: 'Pl. Espanya/Gran Via C.Catalanes',
+                  ID_POBLACIO: 748 } },
+  { type: 'Feature',
+    geometry: { type: 'Point', coordinates: [2.1687, 41.3875] },
+    properties: { CODI_PARADA: 366, NOM_PARADA: 'Pl Catalunya' } },
+  { type: 'Feature',
+    geometry: null,
+    properties: { CODI_PARADA: 999, NOM_PARADA: 'Sense posicio' } }
 ] };
 
-var nearby = TMB.parseNearby(geo, 41.3874, 2.1686);
-check('sorted by distance', nearby.map(function (s) { return s.code; }), ['366', '1122']);
-check('stops without a code are dropped', nearby.length, 2);
-truthy('nearest stop is a few metres away', nearby[0].dist < 50);
+var index = TMB.parseStopIndex(geo);
+check('a stop keeps its code, its name and where it is', index[0],
+      { c: '2775', n: 'Pl Espanya', y: 41.374565, x: 2.148751 });
+check('stops with no geometry are dropped', index.length, 2);
+check('the code comes through as a string, as the watch wants it',
+      typeof index[1].c, 'string');
 
-check('lowercase property names also work',
-      TMB.parseNearby({ features: [ { properties: { codi: '99', nom: 'Test' },
-        geometry: { coordinates: [2.1686, 41.3874] } } ] }, 41.3874, 2.1686)[0].name,
-      'Test');
+check('DESC_PARADA stands in when a stop has no short name',
+      TMB.parseStopIndex({ features: [{ geometry: { coordinates: [2, 41] },
+        properties: { CODI_PARADA: 1, DESC_PARADA: 'Gran Via/Entenca' } }] })[0].n,
+      'Gran Via/Entenca');
+
+console.log('\nnearestStops');
+
+var near = TMB.nearestStops(index, 41.3874, 2.1686, 500, 16);
+check('only what is within reach', near.length, 1);
+check('and it is the right one', near[0].code, '366');
+truthy('carrying how far it is', near[0].dist < 20);
+
+var wide = TMB.nearestStops(index, 41.3874, 2.1686, 3000, 16);
+check('widen the radius and the rest appear, nearest first',
+      wide.map(function (s) { return s.code; }), ['366', '2775']);
+truthy('the far one is a couple of kilometres out',
+       wide[1].dist > 2000 && wide[1].dist < 2400);
+
+check('a limit is a limit', TMB.nearestStops(index, 41.3874, 2.1686, 3000, 1).length, 1);
+check('nothing in range is no stops, not an error',
+      TMB.nearestStops(index, 41.0, 2.0, 500, 16), []);
+check('an empty index is handled', TMB.nearestStops([], 41.3874, 2.1686, 500, 16), []);
 
 console.log('\nsettings page');
 

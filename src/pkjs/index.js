@@ -15,6 +15,12 @@ var CONFIG = require('./config');
 
 var SETTINGS_KEY = 'bcnbus:settings';
 var FAVS_KEY = 'bcnbus:favs';
+var STOPS_KEY = 'bcnbus:stops';
+
+// Stops do not move. The list is fetched once and kept, and only looked at
+// again when it is older than this.
+var STOPS_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
+var STOPS_TIMEOUT = 45000;   // it is every stop TMB runs, so allow for it
 
 // watch -> phone
 var CMD_REQ_TIMES = 1;
@@ -79,6 +85,27 @@ function saveFavs(favs) {
   }
 }
 
+function loadStopIndex() {
+  try {
+    return JSON.parse(localStorage.getItem(STOPS_KEY)) || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveStopIndex(index) {
+  try {
+    localStorage.setItem(STOPS_KEY, JSON.stringify({
+      at: Date.now(),
+      list: index
+    }));
+  } catch (e) {
+    // Out of room: the search still works this time, it just pays for the
+    // download again next time.
+    console.log('could not keep the stop list: ' + e);
+  }
+}
+
 function text(key) {
   var lang = loadSettings().lang;
   return (TEXT[lang] || TEXT.ca)[key];
@@ -102,10 +129,10 @@ function sendError(message) {
   send({ MSG_TYPE: MSG_ERROR, PAYLOAD: String(message).substring(0, 47) });
 }
 
-function httpGet(url, onOk, onFail) {
+function httpGet(url, onOk, onFail, timeout) {
   var request = new XMLHttpRequest();
   request.open('GET', url, true);
-  request.timeout = 15000;
+  request.timeout = timeout || 15000;
 
   request.onload = function () {
     if (request.status >= 200 && request.status < 300) {
@@ -180,39 +207,40 @@ function handleTimes(code) {
   });
 }
 
-// Works through the candidate queries until one answers with stops. Every
-// attempt says what it did in the log, and a failure is carried to the end
-// rather than dropped: an unusable filter and an empty patch of countryside
-// used to reach the watch as the same "no stops nearby", which is why this
-// has been impossible to tell apart from a bug.
-function tryNearby(urls, index, lat, lon, failure) {
-  if (index >= urls.length) {
-    sendError(failure || text('none'));
+// The stop list, from storage when it is there and from TMB when it is not.
+// A list too old to trust is still better than no search at all, so a failed
+// refresh falls back to it rather than to an error.
+function withStopIndex(onReady, onFail) {
+  var cached = loadStopIndex();
+  var usable = cached && cached.list && cached.list.length;
+
+  if (usable && (Date.now() - (cached.at || 0)) < STOPS_MAX_AGE) {
+    onReady(cached.list);
     return;
   }
 
-  var attempt = urls[index];
+  console.log('stops: fetching the list' + (usable ? ' again' : ''));
 
-  httpGet(attempt.url, function (json) {
-    var stops = TMB.parseNearby(json, lat, lon).slice(0, MAX_NEARBY);
+  httpGet(TMB.buildStopsUrl(), function (json) {
+    var index = TMB.parseStopIndex(json);
+    console.log('stops: ' + index.length + ' with a position');
 
-    if (stops.length === 0) {
-      // A good answer we made nothing of: the shape, so the property names
-      // it really uses can be read off the log.
-      console.log('nearby ' + attempt.name + ': no stops in ' +
+    if (index.length === 0) {
+      if (usable) { onReady(cached.list); return; }
+      console.log('stops: nothing usable in ' +
                   JSON.stringify(json).substring(0, 300));
-      tryNearby(urls, index + 1, lat, lon, failure);
+      onFail(text('none'));
       return;
     }
 
-    console.log('nearby ' + attempt.name + ': ' + stops.length + ' stops, ' +
-                'nearest ' + Math.round(stops[0].dist) + 'm');
-    send({ MSG_TYPE: MSG_NEARBY, PAYLOAD: TMB.encodeStops(stops) });
+    saveStopIndex(index);
+    onReady(index);
   }, function (status, message, body) {
-    console.log('nearby ' + attempt.name + ': HTTP ' + status + ' ' +
+    console.log('stops: HTTP ' + status + ' ' +
                 String(body || '').substring(0, 200));
-    tryNearby(urls, index + 1, lat, lon, status ? message : failure);
-  });
+    if (usable) { onReady(cached.list); return; }
+    onFail(message);
+  }, STOPS_TIMEOUT);
 }
 
 function handleNearby() {
@@ -229,7 +257,19 @@ function handleNearby() {
     console.log('nearby: fix near ' + lat.toFixed(3) + ',' + lon.toFixed(3) +
                 ' radius ' + radius + 'm');
 
-    tryNearby(TMB.buildNearbyUrls(lat, lon, radius), 0, lat, lon, null);
+    withStopIndex(function (index) {
+      var stops = TMB.nearestStops(index, lat, lon, radius, MAX_NEARBY);
+
+      if (stops.length === 0) {
+        console.log('nearby: nothing within ' + radius + 'm of the fix');
+        sendError(text('none'));
+        return;
+      }
+
+      console.log('nearby: ' + stops.length + ' stops, nearest ' +
+                  Math.round(stops[0].dist) + 'm');
+      send({ MSG_TYPE: MSG_NEARBY, PAYLOAD: TMB.encodeStops(stops) });
+    }, sendError);
   }, function (error) {
     console.log('nearby: no position (' + (error && error.message) + ')');
     sendError(text('gps'));

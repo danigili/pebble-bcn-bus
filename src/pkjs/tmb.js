@@ -21,6 +21,9 @@
  * envelope, and the older { data: { ibus: [...] } } shape, which some
  * deployments still answer with. Reading a live response from here is not
  * possible, so the parser accepts what it is given rather than insisting.
+ *
+ * The stops endpoint is a different matter: it is GeoJSON, documented, and
+ * has no way to ask for what is near a point. See buildStopsUrl.
  */
 
 var BASE = 'https://api.tmb.cat/v1';
@@ -35,11 +38,6 @@ var APP_KEY = '71f41c220aa7bcada2565b4ce0dd4ddd';
 var MAX_PAYLOAD  = 900;   // keep well inside the watch's AppMessage inbox
 var MAX_DEST     = 24;
 var MAX_PER_LINE = 3;     // nobody is waiting for the fourth bus of one line
-
-var CODE_KEYS = ['CODI_PARADA', 'codi_parada', 'CODI', 'codi', 'ID_PARADA',
-                 'stop_code', 'code'];
-var NAME_KEYS = ['NOM_PARADA', 'nom_parada', 'NOM', 'nom', 'ADRECA',
-                 'adreca', 'name'];
 
 function firstString(obj, keys) {
   if (!obj) return '';
@@ -68,39 +66,12 @@ function buildIbusUrl(stopCode) {
   return BASE + '/ibus/stops/' + encodeURIComponent(stopCode) + '?' + auth();
 }
 
-// The stops endpoint takes a CQL filter, and which spatial predicate it
-// accepts has never been confirmed against the live service. So this returns
-// a list of candidates to be tried in turn, each with a name, because the
-// one that works is worth knowing: the caller logs it.
-//
-// Two unknowns, four combinations. The predicate (a distance query, or the
-// bounding box that is more widely supported), and the case of the geometry
-// column: CQL attribute names are case sensitive, and every other property
-// of these stops comes back shouting (CODI_PARADA, NOM_PARADA), so the
-// column is as likely to be GEOMETRIA as geometria.
-function buildNearbyUrls(lat, lon, radius) {
-  var base = BASE + '/transit/parades?' + auth();
-  var dLat = radius / 111320;
-  var dLon = radius / (111320 * Math.max(0.1, Math.cos(lat * Math.PI / 180)));
-  var out = [];
-
-  var columns = ['GEOMETRIA', 'geometria'];
-  for (var i = 0; i < columns.length; i++) {
-    var column = columns[i];
-    out.push({
-      name: 'DWITHIN/' + column,
-      url: base + '&filter=' + encodeURIComponent(
-          'DWITHIN(' + column + ',POINT(' + lon + ' ' + lat + '),' +
-          radius + ',meters)')
-    });
-    out.push({
-      name: 'BBOX/' + column,
-      url: base + '&filter=' + encodeURIComponent(
-          'BBOX(' + column + ',' + (lon - dLon) + ',' + (lat - dLat) + ',' +
-          (lon + dLon) + ',' + (lat + dLat) + ')')
-    });
-  }
-  return out;
+// Every bus stop TMB runs, as GeoJSON. There is no way to ask for the ones
+// near a point: the filter parameter matches properties, not geometry. So
+// the whole list is fetched, boiled down to a coordinate each, and kept on
+// the phone — stops do not move — and the nearby search happens here.
+function buildStopsUrl() {
+  return BASE + '/transit/parades?' + auth();
 }
 
 function listOf(value) {
@@ -189,6 +160,7 @@ var OLD_LINE_KEYS = ['line', 'routeId', 'route', 'nom_linia', 'linia'];
 var OLD_MIN_KEYS  = ['t-in-min', 'tInMin', 'temps_min', 'minutes'];
 var OLD_SEC_KEYS  = ['t-in-s', 'tInS', 'temps_s', 'seconds'];
 var OLD_DEST_KEYS = ['destination', 'desti', 'desti_trajecte', 'headsign'];
+var OLD_NAME_KEYS = ['NOM_PARADA', 'nom_parada', 'nom', 'name'];
 
 function firstNumber(obj, keys) {
   for (var i = 0; i < keys.length; i++) {
@@ -245,28 +217,50 @@ function haversine(lat1, lon1, lat2, lon2) {
   return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function parseNearby(json, lat, lon) {
-  var features = (json && json.features) || [];
+// The stops, kept down to what a search needs: a code, something to call
+// it, and where it is. A couple of thousand of these live in the phone's
+// storage, so every field that is not one of those three is dropped.
+//
+// The documented shape is GeoJSON, with the coordinates in EPSG:4326 and
+// longitude first.
+function parseStopIndex(json) {
+  var features = listOf(json && json.features);
   var out = [];
 
   for (var i = 0; i < features.length; i++) {
     var feature = features[i] || {};
     var props = feature.properties || {};
 
-    var code = sanitize(firstString(props, CODE_KEYS));
+    var code = sanitize(props.CODI_PARADA);
     if (!code) continue;
 
-    var name = sanitize(firstString(props, NAME_KEYS)) || code;
-    var distance = Number.MAX_VALUE;
     var coords = feature.geometry && feature.geometry.coordinates;
-    if (coords && coords.length >= 2) {
-      distance = haversine(lat, lon, coords[1], coords[0]);
-    }
-    out.push({ code: code, name: name, dist: distance });
+    var lon = toNumber(coords && coords[0]);
+    var lat = toNumber(coords && coords[1]);
+    if (lat === null || lon === null) continue;
+
+    out.push({
+      c: code,
+      n: sanitize(props.NOM_PARADA || props.DESC_PARADA) || code,
+      y: lat,
+      x: lon
+    });
+  }
+  return out;
+}
+
+// The stops within reach of a point, nearest first.
+function nearestStops(index, lat, lon, radius, limit) {
+  var out = [];
+
+  for (var i = 0; i < index.length; i++) {
+    var stop = index[i];
+    var dist = haversine(lat, lon, stop.y, stop.x);
+    if (dist <= radius) out.push({ code: stop.c, name: stop.n, dist: dist });
   }
 
   out.sort(function (a, b) { return a.dist - b.dist; });
-  return out;
+  return out.slice(0, limit);
 }
 
 function pickStopName(json, code) {
@@ -274,7 +268,7 @@ function pickStopName(json, code) {
   if (stop) return sanitize(stop.nom_parada);
 
   var raw = listOf(json && json.data && json.data.ibus);
-  return raw.length ? sanitize(firstString(raw[0], NAME_KEYS)) : '';
+  return raw.length ? sanitize(firstString(raw[0], OLD_NAME_KEYS)) : '';
 }
 
 // Everything travels in one string, and the watch keeps a fixed number of
@@ -335,9 +329,10 @@ var TMB = {
   APP_KEY: APP_KEY,
   sanitize: sanitize,
   buildIbusUrl: buildIbusUrl,
-  buildNearbyUrls: buildNearbyUrls,
+  buildStopsUrl: buildStopsUrl,
   parseArrivals: parseArrivals,
-  parseNearby: parseNearby,
+  parseStopIndex: parseStopIndex,
+  nearestStops: nearestStops,
   pickStopName: pickStopName,
   encodeArrivals: encodeArrivals,
   encodeStops: encodeStops,

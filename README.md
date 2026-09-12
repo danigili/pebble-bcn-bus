@@ -77,6 +77,19 @@ desar una parada segueix funcionant amb el mòbil fora de cobertura.
 La pantalla de configuració es genera com una URI `data:` i no necessita ni
 allotjament ni cap dependència de npm.
 
+### Les parades a prop
+
+L'API **no sap buscar per ubicació**: el paràmetre `filter` de
+`/transit/parades` filtra per propietats (`ID_POBLACIO=748`), no per
+geometria. O sigui que la cerca per proximitat es fa al mòbil.
+
+El primer cop que fas servir *A prop meu*, el mòbil es baixa totes les
+parades de TMB, les redueix a codi, nom i coordenades —la resta de camps es
+llencen— i es guarda la llista. A partir d'aquí, buscar és calcular
+distàncies en local: instantani i sense tornar a sortir a la xarxa. La
+llista es refresca al cap d'un mes, i si la descàrrega falla es fa servir la
+que hi ha encara que sigui vella, que sempre és millor que no poder buscar.
+
 ### El teclat
 
 Tota l'app va amb botons, també el teclat numèric: amunt i avall canvien la
@@ -145,22 +158,6 @@ en mil·lisegons, la resposta al nivell de dalt o dins d'un embolcall `data`,
 i encara entén la forma antiga (`data.ibus`) per si el servei la torna. Si
 tot i així no en surt cap bus, el mòbil escriu la resposta al log
 (`pebble logs`), que és la manera d'acabar de lligar-ho.
-
-I queda una part escrita sense poder provar-la de cap manera:
-
-- **Les parades per GPS.** L'endpoint de parades accepta un filtre CQL, però
-  no se n'ha pogut confirmar ni la sintaxi ni com es diu la columna de
-  geometria. Es proven quatre combinacions —`DWITHIN` i `BBOX`, per
-  `GEOMETRIA` i per `geometria`—, i també diversos noms de camp
-  (`CODI_PARADA`, `codi`, `NOM_PARADA`…) per treure codi i nom de cada
-  parada.
-
-  **Cada intent deixa rastre al log**, amb el nom de la combinació, el codi
-  HTTP i el que ha contestat el servidor. Amb `pebble logs` mentre fas una
-  cerca es veu quina funciona, o per què no en funciona cap, i llavors es pot
-  deixar només la bona. Si cap contesta, el rellotge mostra l'error de debò
-  en comptes de dir que no hi ha cap parada a prop, que és el que feia abans
-  i és el que ho ha fet impossible de diagnosticar.
 
 El camí d'iBus, en canvi, ja està escrit contra la resposta de debò: temps
 d'arribada absoluts dins de `parades[].linies_trajectes[].propers_busos[]`,
