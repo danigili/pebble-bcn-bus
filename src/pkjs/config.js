@@ -5,6 +5,9 @@
  * nothing to host. Note that a data: URI has a null origin, so this page
  * cannot call the TMB API itself: everything it needs is baked in before it
  * is opened, and everything it produces goes back through the close URL.
+ *
+ * There is nothing here about credentials: the app ships with its own, so
+ * the page only carries preferences and the favourites list.
  */
 
 function escapeHtml(text) {
@@ -15,8 +18,6 @@ function escapeHtml(text) {
 
 function buildConfigPage(settings, favourites) {
   var state = JSON.stringify({
-    app_id: settings.app_id || '',
-    app_key: settings.app_key || '',
     lang: settings.lang || 'ca',
     radius: settings.radius || 500,
     favs: favourites || []
@@ -53,14 +54,6 @@ function buildConfigPage(settings, favourites) {
     '<h1>BCN Bus</h1>',
     '<p class="sub">Temps d\'espera de TMB al rellotge.</p>',
 
-    '<h2>Credencials TMB</h2>',
-    '<label for="id">app_id</label><input id="id" autocapitalize="off" ',
-    'autocorrect="off" spellcheck="false">',
-    '<label for="key">app_key</label><input id="key" autocapitalize="off" ',
-    'autocorrect="off" spellcheck="false">',
-    '<div class="hint">Registra una aplicaci&oacute; a developer.tmb.cat per ',
-    'obtenir-les. Es guarden nom&eacute;s al tel&egrave;fon.</div>',
-
     '<h2>Prefer&egrave;ncies</h2>',
     '<label for="lang">Idioma</label><select id="lang">',
     '<option value="ca">Catal&agrave;</option>',
@@ -79,8 +72,6 @@ function buildConfigPage(settings, favourites) {
 
     '<script>',
     'var S=', state, ';',
-    'document.getElementById("id").value=S.app_id;',
-    'document.getElementById("key").value=S.app_key;',
     'document.getElementById("lang").value=S.lang;',
     'document.getElementById("radius").value=S.radius;',
     'var box=document.getElementById("favs");',
@@ -123,9 +114,7 @@ function buildConfigPage(settings, favourites) {
     '  var name=rows[i].querySelector(".name").value.replace(/[|;]/g,"/").trim();',
     '  favs.push({code:code,name:name||code});',
     ' }',
-    ' var out={app_id:document.getElementById("id").value.trim(),',
-    '  app_key:document.getElementById("key").value.trim(),',
-    '  lang:document.getElementById("lang").value,',
+    ' var out={lang:document.getElementById("lang").value,',
     '  radius:parseInt(document.getElementById("radius").value,10)||500,',
     '  favs:favs};',
     ' location.href=returnUrl()+encodeURIComponent(JSON.stringify(out));',

@@ -13,6 +13,13 @@
 
 var BASE = 'https://api.tmb.cat/v1';
 
+// The app's own TMB credentials, shipped with it so there is nothing to set
+// up before the first bus time shows up. They ride along in the JS bundle
+// that reaches the phone, so they are public in practice: if the quota ever
+// runs out or they leak, regenerate them at developer.tmb.cat.
+var APP_ID  = 'd4ef8b79';
+var APP_KEY = '71f41c220aa7bcada2565b4ce0dd4ddd';
+
 var MAX_PAYLOAD = 900;   // keep well inside the watch's AppMessage inbox
 var MAX_DEST    = 24;
 
@@ -57,20 +64,20 @@ function sanitize(text) {
       .trim();
 }
 
-function auth(creds) {
-  return 'app_id=' + encodeURIComponent(creds.app_id || '') +
-         '&app_key=' + encodeURIComponent(creds.app_key || '');
+function auth() {
+  return 'app_id=' + encodeURIComponent(APP_ID) +
+         '&app_key=' + encodeURIComponent(APP_KEY);
 }
 
-function buildIbusUrl(creds, stopCode) {
-  return BASE + '/ibus/stops/' + encodeURIComponent(stopCode) + '?' + auth(creds);
+function buildIbusUrl(stopCode) {
+  return BASE + '/ibus/stops/' + encodeURIComponent(stopCode) + '?' + auth();
 }
 
 // The stops endpoint takes a CQL filter. We could not verify which spatial
 // predicate it accepts, so try the distance form first and fall back to a
 // bounding box, which is the more widely supported of the two.
-function buildNearbyUrls(creds, lat, lon, radius) {
-  var base = BASE + '/transit/parades?' + auth(creds);
+function buildNearbyUrls(lat, lon, radius) {
+  var base = BASE + '/transit/parades?' + auth();
   var dLat = radius / 111320;
   var dLon = radius / (111320 * Math.max(0.1, Math.cos(lat * Math.PI / 180)));
 
@@ -209,6 +216,8 @@ function parseStops(payload) {
 
 var TMB = {
   BASE: BASE,
+  APP_ID: APP_ID,
+  APP_KEY: APP_KEY,
   sanitize: sanitize,
   buildIbusUrl: buildIbusUrl,
   buildNearbyUrls: buildNearbyUrls,

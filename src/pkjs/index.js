@@ -32,13 +32,13 @@ var LANGS = { ca: 0, es: 1, en: 2 };
 
 // Kept short: the watch truncates these to 47 characters.
 var TEXT = {
-  ca: { creds: 'Falten credencials', net: 'Sense connexio',
+  ca: { creds: 'Credencials rebutjades', net: 'Sense connexio',
         http: 'Error del servidor', gps: 'Sense ubicacio',
         none: 'Cap parada a prop', stop: 'Parada' },
-  es: { creds: 'Faltan credenciales', net: 'Sin conexion',
+  es: { creds: 'Credenciales rechazadas', net: 'Sin conexion',
         http: 'Error del servidor', gps: 'Sin ubicacion',
         none: 'Ninguna parada cerca', stop: 'Parada' },
-  en: { creds: 'Missing credentials', net: 'No connection',
+  en: { creds: 'Credentials rejected', net: 'No connection',
         http: 'Server error', gps: 'No location',
         none: 'No stops nearby', stop: 'Stop' }
 };
@@ -126,10 +126,6 @@ function httpGet(url, onOk, onFail) {
   request.send();
 }
 
-function hasCredentials(settings) {
-  return !!(settings.app_id && settings.app_key);
-}
-
 // -------------------------------------------------------------- actions
 
 function favouriteName(code) {
@@ -141,13 +137,7 @@ function favouriteName(code) {
 }
 
 function handleTimes(code) {
-  var settings = loadSettings();
-  if (!hasCredentials(settings)) {
-    sendError(text('creds'));
-    return;
-  }
-
-  httpGet(TMB.buildIbusUrl(settings, code), function (json) {
+  httpGet(TMB.buildIbusUrl(code), function (json) {
     // Prefer the name the user gave the stop, then whatever the API knows,
     // and only then fall back to something built from the code.
     var name = favouriteName(code) ||
@@ -184,15 +174,11 @@ function tryNearby(urls, index, lat, lon) {
 
 function handleNearby() {
   var settings = loadSettings();
-  if (!hasCredentials(settings)) {
-    sendError(text('creds'));
-    return;
-  }
 
   navigator.geolocation.getCurrentPosition(function (position) {
     var lat = position.coords.latitude;
     var lon = position.coords.longitude;
-    tryNearby(TMB.buildNearbyUrls(settings, lat, lon, settings.radius || 500),
+    tryNearby(TMB.buildNearbyUrls(lat, lon, settings.radius || 500),
               0, lat, lon);
   }, function () {
     sendError(text('gps'));
@@ -244,8 +230,6 @@ Pebble.addEventListener('webviewclosed', function (event) {
   }
 
   saveSettings({
-    app_id: data.app_id || '',
-    app_key: data.app_key || '',
     lang: data.lang || 'ca',
     radius: data.radius || 500
   });

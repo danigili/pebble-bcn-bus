@@ -15,10 +15,14 @@ a favorites o treure-la. Funciona igual hi hagis arribat com hi hagis arribat.
 
 ## Credencials
 
-L'API de TMB demana credencials pròpies i **no en venen d'incloses**. Registra
-una aplicació a [developer.tmb.cat](https://developer.tmb.cat/) i posa
-`app_id` i `app_key` a la pantalla de configuració de l'app, des del mòbil. Es
-guarden només al telèfon.
+Les credencials de l'API de TMB **venen incloses** a `src/pkjs/tmb.js`, així
+que no cal configurar res: instal·la l'app i ja consulta temps d'espera.
+
+Van dins del paquet de JavaScript que arriba al mòbil i el codi és públic, de
+manera que a la pràctica són credencials públiques i la quota és compartida.
+Si un dia s'esgota o les vols teves, registra una aplicació a
+[developer.tmb.cat](https://developer.tmb.cat/) i canvia `APP_ID` i `APP_KEY`
+en aquell fitxer.
 
 ## Compilar i instal·lar
 
@@ -77,7 +81,7 @@ maquinari.
 ## Provar-ho sense rellotge
 
 El SDK porta emulador, i el JavaScript del mòbil corre a la teva màquina, així
-que **les crides reals a l'API de TMB funcionen** si hi poses les credencials.
+que **les crides reals a l'API de TMB funcionen**, credencials incloses.
 
     pebble build
     pebble install --emulator emery
@@ -85,14 +89,14 @@ que **les crides reals a l'API de TMB funcionen** si hi poses les credencials.
 Els botons del rellotge es mapegen al teclat: `Q` enrere, `W` amunt, `S`
 central, `X` avall (o les fletxes).
 
-Per posar-hi les credencials, amb **l'app oberta a l'emulador**, executa en una
-altra terminal:
+Per tocar l'idioma, el radi de cerca o les favorites, amb **l'app oberta a
+l'emulador**, executa en una altra terminal:
 
     pebble emu-app-config
 
 La pantalla de configuració s'obre al navegador de l'escriptori, no dins de
 l'emulador. En desar, torna per una URL local que el simulador de telèfon
-recull, i des d'allà les credencials es guarden i les favorites baixen al
+recull, i des d'allà les preferències es guarden i les favorites baixen al
 rellotge. Si has sortit de l'app i ets a l'esfera, el comandament no trobarà
 cap configuració a obrir.
 
@@ -117,7 +121,7 @@ porta l'emulador al navegador sense instal·lar res.
 ## Coses pendents de verificar
 
 Dues parts s'han escrit sense poder provar-les contra l'API real, i són les
-primeres que caldria repassar amb credencials a la mà:
+primeres que caldria repassar contra el servei de debò:
 
 - **El nom del camp del destí del bus.** La documentació de l'API no era
   accessible en escriure això, així que el codi prova diversos noms

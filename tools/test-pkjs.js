@@ -95,15 +95,16 @@ truthy('a long arrivals payload is capped for the watch',
 
 console.log('\nURLs');
 
-var creds = { app_id: 'abc', app_key: 'def' };
-check('ibus url', TMB.buildIbusUrl(creds, '366'),
-      'https://api.tmb.cat/v1/ibus/stops/366?app_id=abc&app_key=def');
+var auth = 'app_id=' + TMB.APP_ID + '&app_key=' + TMB.APP_KEY;
+truthy('the app ships with credentials', !!TMB.APP_ID && !!TMB.APP_KEY);
+check('ibus url', TMB.buildIbusUrl('366'),
+      'https://api.tmb.cat/v1/ibus/stops/366?' + auth);
 
-var urls = TMB.buildNearbyUrls(creds, 41.3874, 2.1686, 500);
+var urls = TMB.buildNearbyUrls(41.3874, 2.1686, 500);
 check('two nearby strategies are tried', urls.length, 2);
 truthy('first strategy is the distance filter', urls[0].indexOf('DWITHIN') > 0);
 truthy('second strategy is the bounding box', urls[1].indexOf('BBOX') > 0);
-truthy('credentials travel on both', urls[1].indexOf('app_id=abc') > 0);
+truthy('credentials travel on both', urls[1].indexOf(auth) > 0);
 
 console.log('\nparseNearby');
 
@@ -128,10 +129,11 @@ check('lowercase property names also work',
 
 console.log('\nsettings page');
 
-var html = CONFIG.buildConfigPage({ app_id: 'a', app_key: 'b', lang: 'es', radius: 700 },
+var html = CONFIG.buildConfigPage({ lang: 'es', radius: 700 },
                                   [{ code: '366', name: 'Casa' }]);
 truthy('page closes back into the app', html.indexOf('pebblejs://close#') > 0);
 truthy('existing favourites are baked in', html.indexOf('"366"') > 0);
+truthy('the page asks for no credentials', html.indexOf('app_key') < 0);
 truthy('fits comfortably in a data: URI', encodeURIComponent(html).length < 60000);
 truthy('no stray closing script tag breaks the page',
        html.split('<script>').length === html.split('<\/script>').length);
