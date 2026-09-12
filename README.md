@@ -128,17 +128,18 @@ porta l'emulador al navegador sense instal·lar res.
 
 ## Coses pendents de verificar
 
-Dues parts s'han escrit sense poder provar-les contra l'API real, i són les
-primeres que caldria repassar contra el servei de debò:
+Queda una part escrita sense poder provar-la contra l'API real:
 
-- **El nom del camp del destí del bus.** La documentació de l'API no era
-  accessible en escriure això, així que el codi prova diversos noms
-  (`destination`, `desti`, `headsign`…) i, si no en troba cap, simplement no
-  mostra el destí en comptes de petar. També descarta valors que semblin un
-  temps (“3 min”) en lloc d'un destí.
 - **Les parades per GPS.** L'endpoint de parades accepta un filtre CQL, però
   no se n'ha pogut confirmar la sintaxi. Es proven dues formes, `DWITHIN` i
-  després `BBOX`, i si cap funciona es mostra un error clar.
+  després `BBOX`, i si cap funciona es mostra un error clar. Com que no en
+  sabem la resposta exacta, aquest camí encara prova diversos noms de camp
+  (`CODI_PARADA`, `codi`, `NOM_PARADA`…) per treure codi i nom de cada parada.
+
+El camí d'iBus, en canvi, ja està escrit contra la resposta de debò: temps
+d'arribada absoluts dins de `parades[].linies_trajectes[].propers_busos[]`,
+que es resten del `timestamp` de la mateixa resposta per saber quants minuts
+falten.
 
 ## Llicència
 

@@ -146,7 +146,7 @@ function handleTimes(code) {
 
     send({
       MSG_TYPE: MSG_TIMES,
-      PAYLOAD: TMB.encodeArrivals(TMB.parseArrivals(json)),
+      PAYLOAD: TMB.encodeArrivals(TMB.parseArrivals(json, code)),
       TITLE: TMB.sanitize(name).substring(0, 26)
     });
   }, function (status, message) {

@@ -33,48 +33,114 @@ function truthy(name, value) {
 
 console.log('\nparseArrivals');
 
-var ibus = { data: { ibus: [
-  { line: '59',  routeId: '59',  't-in-min': 12, 't-in-s': 740, 'text-ca': '12 min', desti: 'Poble Sec' },
-  { line: 'H12', routeId: 'H12', 't-in-min': 3,  't-in-s': 190, 'text-ca': '3 min',  destination: 'Gorg' },
-  { line: 'V15', routeId: 'V15', 't-in-min': 0,  't-in-s': 20,  'text-ca': 'Arribant' }
-] } };
+// The shape the service really answers with, kept verbatim from a live
+// response so the parser is tested against the thing and not a sketch of it.
+var ibus = {
+  timestamp: 1744273964116,
+  parades: [{
+    codi_parada: '108',
+    nom_parada: 'Pl Espanya - FGC',
+    linies_trajectes: [{
+      id_operador: 2,
+      transit_namespace: 'bus',
+      codi_linia: '212',
+      nom_linia: 'H12',
+      id_sentit: 2,
+      codi_trajecte: '2121',
+      desti_trajecte: 'Gornal',
+      propers_busos: [
+        { temps_arribada: 1744274012000, id_bus: 3673 },
+        { temps_arribada: 1744274863000, id_bus: 8531 }
+      ]
+    }]
+  }]
+};
 
-var arrivals = TMB.parseArrivals(ibus);
-check('sorted by waiting time', arrivals.map(function (a) { return a.line; }),
-      ['V15', 'H12', '59']);
-check('minutes preserved', arrivals.map(function (a) { return a.mins; }), [0, 3, 12]);
-check('destination found under "destination"', arrivals[1].dest, 'Gorg');
-check('destination found under "desti"', arrivals[2].dest, 'Poble Sec');
-check('missing destination is empty, not undefined', arrivals[0].dest, '');
+var arrivals = TMB.parseArrivals(ibus, '108');
+check('every bus gets its own row, not every line', arrivals.length, 2);
+check('waiting times come from the absolute timestamps',
+      arrivals.map(function (a) { return a.mins; }), [1, 15]);
+check('the line is the name on the stop sign, not the internal code',
+      arrivals[0].line, 'H12');
+check('destination read from desti_trajecte', arrivals[0].dest, 'Gornal');
+check('the stop name comes from nom_parada',
+      TMB.pickStopName(ibus, '108'), 'Pl Espanya - FGC');
 
-// A field that holds "5 min" is the waiting time again, not a destination.
-check('time-like text rejected as a destination',
-      TMB.parseArrivals({ data: { ibus: [
-        { line: 'D20', 't-in-min': 5, destination: '5 min' } ] } })[0].dest, '');
+var twoLines = {
+  timestamp: 1000000,
+  parades: [{
+    codi_parada: '366',
+    linies_trajectes: [
+      { nom_linia: '59', desti_trajecte: 'Poble Sec',
+        propers_busos: [{ temps_arribada: 1000000 + 12 * 60000 }] },
+      { nom_linia: 'V15', desti_trajecte: 'Barceloneta',
+        propers_busos: [{ temps_arribada: 1000000 + 3 * 60000 }] }
+    ]
+  }]
+};
+check('sorted by waiting time across lines',
+      TMB.parseArrivals(twoLines, '366').map(function (a) { return a.line; }),
+      ['V15', '59']);
 
-check('falls back to t-in-s when minutes are absent',
-      TMB.parseArrivals({ data: { ibus: [
-        { line: 'H6', 't-in-s': 200 } ] } })[0].mins, 3);
+check('the right stop is picked out of the list',
+      TMB.parseArrivals({ timestamp: 0, parades: [
+        { codi_parada: '111', linies_trajectes: [
+          { nom_linia: 'H6', propers_busos: [{ temps_arribada: 60000 }] } ] },
+        { codi_parada: '366', linies_trajectes: [
+          { nom_linia: 'D20', propers_busos: [{ temps_arribada: 60000 }] } ] }
+      ] }, '366')[0].line, 'D20');
 
-check('unknown waiting time becomes -1',
-      TMB.parseArrivals({ data: { ibus: [{ line: 'H6' }] } })[0].mins, -1);
+// A bus the service still lists after its predicted minute has passed is
+// pulling in, not running backwards.
+check('an overdue bus is arriving, not negative',
+      TMB.parseArrivals({ timestamp: 500000, parades: [{ codi_parada: '1',
+        linies_trajectes: [{ nom_linia: 'H8',
+          propers_busos: [{ temps_arribada: 480000 }] }] }] }, '1')[0].mins, 0);
 
-check('entries with no line are dropped',
-      TMB.parseArrivals({ data: { ibus: [{ 't-in-min': 4 }] } }).length, 0);
+check('falls back to the phone clock when the response carries no timestamp',
+      TMB.parseArrivals({ parades: [{ codi_parada: '1', linies_trajectes: [
+        { nom_linia: 'H8', propers_busos: [
+          { temps_arribada: Date.now() + 5 * 60000 } ] } ] }] }, '1')[0].mins, 5);
 
-check('empty response is handled', TMB.parseArrivals({}), []);
-check('null response is handled', TMB.parseArrivals(null), []);
+check('a bus with no arrival time is dropped',
+      TMB.parseArrivals({ timestamp: 0, parades: [{ codi_parada: '1',
+        linies_trajectes: [{ nom_linia: 'H8',
+          propers_busos: [{ id_bus: 3673 }] }] }] }, '1').length, 0);
 
-check('a single object rather than an array still parses',
-      TMB.parseArrivals({ data: { ibus: { line: 'V21', 't-in-min': 7 } } }).length, 1);
+check('a line with nothing coming shows nothing',
+      TMB.parseArrivals({ timestamp: 0, parades: [{ codi_parada: '1',
+        linies_trajectes: [{ nom_linia: 'H8' }] }] }, '1').length, 0);
+
+check('codi_linia stands in when the line has no name',
+      TMB.parseArrivals({ timestamp: 0, parades: [{ codi_parada: '1',
+        linies_trajectes: [{ codi_linia: '212',
+          propers_busos: [{ temps_arribada: 60000 }] }] }] }, '1')[0].line, '212');
+
+check('trajectes with no line at all are dropped',
+      TMB.parseArrivals({ timestamp: 0, parades: [{ codi_parada: '1',
+        linies_trajectes: [{ propers_busos: [{ temps_arribada: 60000 }] }] }] },
+        '1').length, 0);
+
+check('a missing destination is empty, not undefined',
+      TMB.parseArrivals({ timestamp: 0, parades: [{ codi_parada: '1',
+        linies_trajectes: [{ nom_linia: 'H8',
+          propers_busos: [{ temps_arribada: 60000 }] }] }] }, '1')[0].dest, '');
+
+check('empty response is handled', TMB.parseArrivals({}, '366'), []);
+check('null response is handled', TMB.parseArrivals(null, '366'), []);
+check('a stop the answer does not mention yields nothing',
+      TMB.parseArrivals({ timestamp: 0, parades: [] }, '366'), []);
+check('no name for a stop that is not there',
+      TMB.pickStopName({ timestamp: 0, parades: [] }, '366'), '');
 
 console.log('\nseparators');
 
 check('pipes and semicolons never survive in a field',
       TMB.sanitize('A|B;C'), 'A/B/C');
 
-var dirty = TMB.parseArrivals({ data: { ibus: [
-  { line: 'H8', 't-in-min': 2, destination: 'Pl|Espanya;Nord' } ] } });
+var dirty = TMB.parseArrivals({ timestamp: 0, parades: [{ codi_parada: '1',
+  linies_trajectes: [{ nom_linia: 'H8', desti_trajecte: 'Pl|Espanya;Nord',
+    propers_busos: [{ temps_arribada: 2 * 60000 }] }] }] }, '1');
 check('a destination cannot break the encoding', dirty[0].dest, 'Pl/Espanya/Nord');
 check('encoded record stays parseable',
       TMB.encodeArrivals(dirty), 'H8|2|Pl/Espanya/Nord;');

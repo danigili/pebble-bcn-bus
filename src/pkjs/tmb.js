@@ -5,10 +5,16 @@
  * Everything here is a pure function so it can be exercised from Node
  * without a phone or a watch; see tools/test-pkjs.js.
  *
- * The iBus response shape is documented at developer.tmb.cat. The field
- * carrying the destination is not something we could confirm, so instead of
- * betting on one name we probe the plausible ones and simply leave the
- * destination out when none of them is present.
+ * The iBus response looks like this:
+ *
+ *   { timestamp, parades: [ { codi_parada, nom_parada, linies_trajectes: [
+ *       { nom_linia, desti_trajecte, propers_busos: [ { temps_arribada } ] }
+ *     ] } ] }
+ *
+ * Arrival times are absolute epoch milliseconds, so a waiting time is a
+ * subtraction. It is measured against the response's own timestamp and not
+ * the phone's clock: the two need not agree, and the server's is the one the
+ * prediction was made against.
  */
 
 var BASE = 'https://api.tmb.cat/v1';
@@ -23,12 +29,6 @@ var APP_KEY = '71f41c220aa7bcada2565b4ce0dd4ddd';
 var MAX_PAYLOAD = 900;   // keep well inside the watch's AppMessage inbox
 var MAX_DEST    = 24;
 
-var LINE_KEYS = ['line', 'routeId', 'route', 'LINIA', 'linia', 'nom_linia'];
-var MIN_KEYS  = ['t-in-min', 'tInMin', 'temps_min', 'minutes'];
-var SEC_KEYS  = ['t-in-s', 'tInS', 'temps_s', 'seconds'];
-var DEST_KEYS = ['destination', 'desti', 'destino', 'DESTI', 'destinacio',
-                 'headsign', 'trip_headsign', 'NOM_DESTI'];
-
 var CODE_KEYS = ['CODI_PARADA', 'codi_parada', 'CODI', 'codi', 'ID_PARADA',
                  'stop_code', 'code'];
 var NAME_KEYS = ['NOM_PARADA', 'nom_parada', 'NOM', 'nom', 'ADRECA',
@@ -42,18 +42,6 @@ function firstString(obj, keys) {
     if (typeof value === 'number') return String(value);
   }
   return '';
-}
-
-function firstNumber(obj, keys) {
-  if (!obj) return null;
-  for (var i = 0; i < keys.length; i++) {
-    var value = obj[keys[i]];
-    if (typeof value === 'number' && isFinite(value)) return value;
-    if (typeof value === 'string' && value !== '' && !isNaN(Number(value))) {
-      return Number(value);
-    }
-  }
-  return null;
 }
 
 // The separators are structural, so they must never survive inside a field.
@@ -92,40 +80,59 @@ function buildNearbyUrls(lat, lon, radius) {
   ];
 }
 
-function parseArrivals(json) {
-  var raw = json && json.data && json.data.ibus;
-  if (!raw) return [];
-  if (!Array.isArray(raw)) raw = [raw];
+function listOf(value) {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
 
+// The endpoint is asked about one stop, but it answers with a list, so pick
+// the stop that was asked for and fall back to whatever came back.
+function findStop(json, code) {
+  var parades = listOf(json && json.parades);
+  for (var i = 0; i < parades.length; i++) {
+    if (parades[i] && String(parades[i].codi_parada) === String(code)) {
+      return parades[i];
+    }
+  }
+  return parades[0] || null;
+}
+
+function minutesUntil(arrival, now) {
+  if (typeof arrival !== 'number' || !isFinite(arrival)) return null;
+  var mins = Math.round((arrival - now) / 60000);
+  return mins < 0 ? 0 : mins;   // a bus that is overdue is arriving, not late
+}
+
+function parseArrivals(json, code) {
+  var stop = findStop(json, code);
+  if (!stop) return [];
+
+  var now = (json && typeof json.timestamp === 'number') ? json.timestamp
+                                                         : Date.now();
+  var trips = listOf(stop.linies_trajectes);
   var out = [];
-  for (var i = 0; i < raw.length; i++) {
-    var item = raw[i];
-    if (!item) continue;
 
-    var line = sanitize(firstString(item, LINE_KEYS));
+  for (var i = 0; i < trips.length; i++) {
+    var trip = trips[i] || {};
+
+    // nom_linia is what the stop sign says ("H12"); codi_linia is TMB's
+    // internal number for it ("212"), which is no use to anyone waiting.
+    var line = sanitize(trip.nom_linia || trip.codi_linia);
     if (!line) continue;
 
-    var mins = firstNumber(item, MIN_KEYS);
-    if (mins === null) {
-      var seconds = firstNumber(item, SEC_KEYS);
-      if (seconds !== null) mins = Math.round(seconds / 60);
+    var dest = sanitize(trip.desti_trajecte).substring(0, MAX_DEST);
+    var buses = listOf(trip.propers_busos);
+
+    // One row per bus, not per line: the next two buses of the same line,
+    // ten minutes apart, is exactly what someone at the stop wants to see.
+    for (var j = 0; j < buses.length; j++) {
+      var mins = minutesUntil(buses[j] && buses[j].temps_arribada, now);
+      if (mins === null) continue;
+      out.push({ line: line, mins: mins, dest: dest });
     }
-    if (mins === null || mins < 0) mins = -1;
-
-    // Some fields hold a phrase like "3 min" rather than a destination;
-    // those are the waiting time again, not somewhere the bus is going.
-    var dest = sanitize(firstString(item, DEST_KEYS));
-    if (/\d+\s*min/i.test(dest)) dest = '';
-
-    out.push({ line: line, mins: mins, dest: dest.substring(0, MAX_DEST) });
   }
 
-  out.sort(function (a, b) {
-    if (a.mins < 0 && b.mins < 0) return 0;
-    if (a.mins < 0) return 1;
-    if (b.mins < 0) return -1;
-    return a.mins - b.mins;
-  });
+  out.sort(function (a, b) { return a.mins - b.mins; });
   return out;
 }
 
@@ -164,13 +171,8 @@ function parseNearby(json, lat, lon) {
 }
 
 function pickStopName(json, code) {
-  var raw = json && json.data && json.data.ibus;
-  if (raw && !Array.isArray(raw)) raw = [raw];
-  if (raw && raw.length) {
-    var name = sanitize(firstString(raw[0], NAME_KEYS));
-    if (name) return name;
-  }
-  return '';
+  var stop = findStop(json, code);
+  return stop ? sanitize(stop.nom_parada) : '';
 }
 
 function encodeArrivals(arrivals) {
