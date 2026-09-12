@@ -159,8 +159,14 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index,
   }
 }
 
+// Picking a bus opens that line's detail. With nothing to pick — loading,
+// an error, no buses — the press means what it always did: try again.
 static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
-  request_times();
+  if (showing_status() || index->row >= g_arrival_count) {
+    request_times();
+    return;
+  }
+  win_line_push(&s_stop, g_arrivals[index->row].line);
 }
 
 static void select_long_click(MenuLayer *menu, MenuIndex *index, void *context) {

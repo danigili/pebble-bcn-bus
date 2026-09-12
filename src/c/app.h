@@ -110,10 +110,10 @@ extern char    g_title[NAME_LEN];
 void win_main_push(void);
 void win_favs_push(void);
 void win_nearby_push(void);
-// The screen a stop opens on: the next two buses, big. win_stop_push is the
-// full list of everything coming, one press further in.
-void win_next_push(const Stop *stop);
 void win_stop_push(const Stop *stop);
+// Picking a line in a stop's list opens its detail: the next two buses of
+// that line, and which stop they are coming to.
+void win_line_push(const Stop *stop, const char *line);
 void win_keypad_push(void);
 
 // ---------------------------------------------------------------- ui.c
