@@ -105,6 +105,10 @@ extern Arrival g_arrivals[MAX_ARRIVALS];
 extern int     g_arrival_count;
 extern Stop    g_nearby[MAX_NEARBY];
 extern int     g_nearby_count;
+// Metres to each of those, or -1 where the phone did not say. Kept beside
+// the stops rather than inside them: a Stop is what a favourite is stored
+// as, and growing it would orphan everything already saved on the watch.
+extern int     g_nearby_dist[MAX_NEARBY];
 extern char    g_error[ERR_LEN];
 extern char    g_title[NAME_LEN];
 

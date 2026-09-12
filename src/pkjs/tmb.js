@@ -296,13 +296,18 @@ function encodeArrivals(arrivals) {
   return parts.join('');
 }
 
+// A third field carries how far away the stop is, in whole metres, for the
+// ones that know. Favourites have no distance and simply leave it off; the
+// watch reads what is there and ignores what is not.
 function encodeStops(stops) {
   var parts = [];
   var length = 0;
 
   for (var i = 0; i < stops.length; i++) {
+    var dist = toNumber(stops[i].dist);
     var record = sanitize(stops[i].code) + '|' +
-                 sanitize(stops[i].name).substring(0, MAX_DEST) + ';';
+                 sanitize(stops[i].name).substring(0, MAX_DEST) +
+                 (dist === null ? '' : '|' + Math.round(dist)) + ';';
     if (length + record.length > MAX_PAYLOAD) break;
     parts.push(record);
     length += record.length;

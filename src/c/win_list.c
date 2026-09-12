@@ -63,6 +63,26 @@ static void draw_header(GContext *ctx, const Layer *cell, uint16_t section,
                               i18n(s_nearby_mode ? T_NEARBY : T_FAVOURITES));
 }
 
+// How far away, bottom right, where the standard cell leaves room: the name
+// runs along the top and the code sits bottom left.
+static void draw_distance(GContext *ctx, const Layer *cell, MenuIndex *index) {
+  if (index->row >= MAX_NEARBY) return;
+
+  int metres = g_nearby_dist[index->row];
+  if (metres < 0) return;
+
+  GRect bounds = layer_get_bounds(cell);
+  char label[12];
+  snprintf(label, sizeof(label), "%d m", metres);
+
+  graphics_context_set_text_color(ctx,
+      menu_layer_is_index_selected(s_menu, index) ? GColorWhite : GColorBlack);
+  graphics_draw_text(ctx, label, fonts_get_system_font(FONT_KEY_GOTHIC_14),
+                     GRect(bounds.size.w - 70 - PBL_IF_ROUND_ELSE(16, 4),
+                           bounds.size.h - 21, 70, 18),
+                     GTextOverflowModeFill, GTextAlignmentRight, NULL);
+}
+
 static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index,
                      void *context) {
   if (showing_status()) {
@@ -73,6 +93,8 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index,
   const Stop *stop = item_at(index->row);
   if (stop == NULL) return;
   menu_cell_basic_draw(ctx, cell, stop->name, stop->code, NULL);
+
+  if (s_nearby_mode) draw_distance(ctx, cell, index);
 }
 
 static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {

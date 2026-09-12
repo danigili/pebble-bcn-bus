@@ -83,6 +83,9 @@ L'API **no sap buscar per ubicació**: el paràmetre `filter` de
 `/transit/parades` filtra per propietats (`ID_POBLACIO=748`), no per
 geometria. O sigui que la cerca per proximitat es fa al mòbil.
 
+Cada parada de la llista mostra **a quina distància és**, en metres, a baix a
+la dreta.
+
 El primer cop que fas servir *A prop meu*, el mòbil es baixa totes les
 parades de TMB, les redueix a codi, nom i coordenades —la resta de camps es
 llencen— i es guarda la llista. A partir d'aquí, buscar és calcular

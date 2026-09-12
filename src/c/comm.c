@@ -4,6 +4,7 @@ Arrival g_arrivals[MAX_ARRIVALS];
 int     g_arrival_count;
 Stop    g_nearby[MAX_NEARBY];
 int     g_nearby_count;
+int     g_nearby_dist[MAX_NEARBY];
 char    g_error[ERR_LEN];
 char    g_title[NAME_LEN];
 
@@ -50,7 +51,8 @@ static void parse_arrivals(char *payload) {
   }
 }
 
-static int parse_stops(char *payload, Stop *out, int max) {
+// Third field, where there is one, is how far away the stop is in metres.
+static int parse_stops(char *payload, Stop *out, int *dists, int max) {
   int count = 0;
 
   char *cursor = payload;
@@ -61,10 +63,12 @@ static int parse_stops(char *payload, Stop *out, int max) {
     char *field = record;
     char *code = str_split(&field, '|');
     char *name = str_split(&field, '|');
+    char *dist = str_split(&field, '|');
     if (code == NULL || code[0] == '\0') continue;
 
     str_copy(out[count].code, code, CODE_LEN);
     str_copy(out[count].name, (name && name[0]) ? name : code, NAME_LEN);
+    if (dists != NULL) dists[count] = (dist && dist[0]) ? atoi(dist) : -1;
     count++;
   }
   return count;
@@ -100,7 +104,8 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
 
     case MSG_NEARBY:
       copy_payload(payload);
-      g_nearby_count = parse_stops(s_payload, g_nearby, MAX_NEARBY);
+      g_nearby_count = parse_stops(s_payload, g_nearby, g_nearby_dist,
+                                   MAX_NEARBY);
       break;
 
     case MSG_ERROR:

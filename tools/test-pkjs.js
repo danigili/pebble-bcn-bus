@@ -184,6 +184,17 @@ console.log('\nencode / parse round trip');
 
 var stops = [{ code: '366', name: 'Casa' }, { code: '1122', name: 'Feina' }];
 check('stops encode', TMB.encodeStops(stops), '366|Casa;1122|Feina;');
+
+// Nearby stops carry a third field, whole metres, for the list to show.
+check('a distance travels with a nearby stop',
+      TMB.encodeStops([{ code: '366', name: 'Pl Catalunya', dist: 44.7 }]),
+      '366|Pl Catalunya|45;');
+check('favourites have no distance and say nothing',
+      TMB.encodeStops([{ code: '366', name: 'Casa' }]).indexOf('|'),
+      3);
+check('the distance does not confuse reading them back',
+      TMB.parseStops('366|Pl Catalunya|45;'),
+      [{ code: '366', name: 'Pl Catalunya' }]);
 check('stops round trip', TMB.parseStops(TMB.encodeStops(stops)), stops);
 check('empty payload parses to nothing', TMB.parseStops(''), []);
 check('a stop with no name falls back to the code',
