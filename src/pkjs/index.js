@@ -213,7 +213,7 @@ function shapeOf(json) {
 }
 
 function handleTimes(code) {
-  httpGet(TMB.buildIbusUrl(code), function (json) {
+  httpGet(TMB.buildTimesUrl(code), function (json) {
     // Prefer the name the user gave the stop, then whatever the API knows,
     // and only then fall back to something built from the code.
     var name = favouriteName(code) ||

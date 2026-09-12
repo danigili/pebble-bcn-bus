@@ -33,8 +33,9 @@ function truthy(name, value) {
 
 console.log('\nparseArrivals');
 
-// The live answer, copied from the endpoint itself. One entry per bus, the
-// waiting time already worked out, and no stop name anywhere in it.
+// The older /ibus/stops answer, copied from that endpoint: one entry per
+// line, the waiting time already worked out, and no stop name in it. Still
+// read, as a fallback.
 var live = { status: 'success', data: { ibus: [
   { destination: 'Can Marcet', line: 'V23', routeId: '2230',
     't-in-min': 5, 't-in-s': 323, 'text-ca': '5 min' },
@@ -276,8 +277,8 @@ console.log('\nURLs');
 
 var auth = 'app_id=' + TMB.APP_ID + '&app_key=' + TMB.APP_KEY;
 truthy('the app ships with credentials', !!TMB.APP_ID && !!TMB.APP_KEY);
-check('ibus url', TMB.buildIbusUrl('366'),
-      'https://api.tmb.cat/v1/ibus/stops/366?' + auth);
+check('times url', TMB.buildTimesUrl('366'),
+      'https://api.tmb.cat/v1/itransit/bus/parades/366?' + auth);
 
 check('stops url', TMB.buildStopsUrl(),
       'https://api.tmb.cat/v1/transit/parades?' + auth);

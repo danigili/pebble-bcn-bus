@@ -64,8 +64,13 @@ function auth() {
          '&app_key=' + encodeURIComponent(APP_KEY);
 }
 
-function buildIbusUrl(stopCode) {
-  return BASE + '/ibus/stops/' + encodeURIComponent(stopCode) + '?' + auth();
+// This is the one that answers with every bus it knows is coming, grouped
+// by line. The older /ibus/stops/<code> gives the same stop but only the
+// nearest bus of each line, which is no use to a screen whose whole job is
+// the one after that.
+function buildTimesUrl(stopCode) {
+  return BASE + '/itransit/bus/parades/' + encodeURIComponent(stopCode) +
+         '?' + auth();
 }
 
 // Every bus stop TMB runs, as GeoJSON. There is no way to ask for the ones
@@ -209,11 +214,12 @@ function fromIbus(json) {
   return out;
 }
 
-// The live shape first, the documented one second: they are different, and
-// the service answers with the first.
+// The shape /itransit/bus/parades answers with first, since that is what we
+// ask for. The flat one from /ibus/stops is kept as a fallback: same stop,
+// same buses, one per line.
 function parseArrivals(json, code) {
-  var out = fromIbus(json);
-  if (out.length === 0) out = fromParades(json, code);
+  var out = fromParades(json, code);
+  if (out.length === 0) out = fromIbus(json);
 
   out.sort(function (a, b) {
     if (a.mins < 0 && b.mins < 0) return 0;
@@ -367,7 +373,7 @@ var TMB = {
   APP_ID: APP_ID,
   APP_KEY: APP_KEY,
   sanitize: sanitize,
-  buildIbusUrl: buildIbusUrl,
+  buildTimesUrl: buildTimesUrl,
   buildStopsUrl: buildStopsUrl,
   parseArrivals: parseArrivals,
   parseStopIndex: parseStopIndex,
