@@ -13,18 +13,6 @@ Tres maneres d'arribar a una parada, i una sola manera de desar-la:
 Des de la pantalla d'una parada, **mantén premut el botó central** per desar-la
 a favorites o treure-la. Funciona igual hi hagis arribat com hi hagis arribat.
 
-## L'arrencada
-
-En obrir l'app, un autobús travessa la pantalla de banda a banda. Està dibuixat
-amb `GPath`, és a dir amb traçats vectorials definits al codi i no amb imatges,
-i amb traç gruixut i colors plans com la resta de la interfície del rellotge.
-Els traçats s'escalen a l'amplada de la pantalla en carregar, de manera que
-omple igual de bé un Basalt de 144 px que un Emery de 200.
-
-![L'animació d'arrencada](docs/splash.png)
-
-Dura poc més d'un segon i **qualsevol botó se la salta**.
-
 ## Credencials
 
 L'API de TMB demana credencials pròpies i **no en venen d'incloses**. Registra
@@ -84,10 +72,6 @@ tàctil ni tan sols es compila.
 ## Provar els canvis
 
     ./tools/run-tests.sh
-
-També dibuixa l'animació d'arrencada a `/tmp` executant el codi de debò
-contra uns stubs que rasteritzen en comptes de pintar al rellotge, que és com
-s'ha ajustat la composició sense tenir cap Pebble a mà.
 
 Comprova el JavaScript del mòbil amb Node, i compila la lògica del rellotge
 per a l'ordinador contra uns *stubs* de `pebble.h` per verificar el parsing i

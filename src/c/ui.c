@@ -30,14 +30,6 @@ GColor ui_accent(void) {
 #endif
 }
 
-GColor ui_road(void) {
-#ifdef PBL_COLOR
-  return GColorFromHEX(0xAAAAAA);
-#else
-  return GColorWhite;
-#endif
-}
-
 void ui_theme_menu(MenuLayer *menu) {
   menu_layer_set_normal_colors(menu, GColorWhite, GColorBlack);
   menu_layer_set_highlight_colors(menu, ui_accent(), GColorWhite);
