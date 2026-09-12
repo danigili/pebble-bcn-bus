@@ -175,15 +175,3 @@ void animation_set_implementation(Animation *animation, const AnimationImplement
 void animation_set_handlers(Animation *animation, AnimationHandlers handlers, void *context);
 bool animation_schedule(Animation *animation);
 bool animation_unschedule(Animation *animation);
-
-#if defined(PBL_TOUCH)
-typedef struct Recognizer Recognizer;
-typedef enum { RecognizerEvent_Started, RecognizerEvent_Updated,
-               RecognizerEvent_Completed, RecognizerEvent_Cancelled } RecognizerEvent;
-typedef void (*RecognizerEventCb)(const Recognizer *, RecognizerEvent);
-bool touch_service_is_enabled(void);
-Recognizer *tap_recognizer_create(RecognizerEventCb cb, void *context);
-GPoint tap_recognizer_get_tap_point(const Recognizer *recognizer);
-void window_attach_recognizer(Window *window, Recognizer *recognizer);
-void window_set_touch_bridge_disabled(Window *window, bool disabled);
-#endif

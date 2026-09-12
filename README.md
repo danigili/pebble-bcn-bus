@@ -43,7 +43,7 @@ hi ha cap mòbil ni cap IP pel mig.
 
 El rellotge no té connexió a internet, així que l'app són dos programes:
 
-    src/c/      codi del rellotge: pantalles, botons, tàctil, favorites
+    src/c/      codi del rellotge: pantalles, botons, favorites
     src/pkjs/   JavaScript que corre al mòbil: crides HTTPS a l'API de TMB
 
 Es parlen per AppMessage. Com que el diccionari d'AppMessage és petit, les
@@ -57,17 +57,12 @@ desar una parada segueix funcionant amb el mòbil fora de cobertura.
 La pantalla de configuració es genera com una URI `data:` i no necessita ni
 allotjament ni cap dependència de npm.
 
-### El tàctil
+### El teclat
 
-El teclat numèric fa servir el reconeixedor de tocs del SDK
-(`tap_recognizer_create`). No s'activa la navegació tàctil del sistema: els
-menús es mouen amb els botons, a propòsit.
-
-Quan `touch_service_is_enabled()` diu que no —perquè el rellotge no té tàctil,
-o perquè l'has desactivat a *Configuració → Pantalla*— el teclat passa a
-botons: amunt i avall canvien la xifra (mantenint-los, gira sola), el central
-avança, i mantenir-lo cerca. Als rellotges sense pantalla tàctil el codi del
-tàctil ni tan sols es compila.
+Tota l'app va amb botons, també el teclat numèric: amunt i avall canvien la
+xifra (mantenint-los, gira sola), el central avança a la següent, i
+mantenir-lo cerca. Enrere esborra l'última xifra i, si només en queda una,
+surt de la pantalla. No es fa servir la pantalla tàctil enlloc.
 
 ## Provar els canvis
 
@@ -111,10 +106,8 @@ I per veure què passa per dins, fer una captura, o desencallar l'emulador:
     pebble kill      # atura emulador i simulador de mòbil
     pebble wipe      # neteja la memòria si es queda penjat
 
-Dues coses que **no** podràs comprovar fins que tinguis el rellotge:
+Una cosa que **no** podràs comprovar fins que tinguis el rellotge:
 
-- **El teclat tàctil.** L'emulador no simula tocs, així que el que provaràs és
-  el camí de botons. Que és, precisament, el que convé tenir ben provat.
 - **La ubicació.** El GPS de l'emulador no és la teva posició real, de manera
   que “A prop meu” pot no retornar res que tingui sentit.
 
