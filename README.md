@@ -149,10 +149,18 @@ tot i així no en surt cap bus, el mòbil escriu la resposta al log
 I queda una part escrita sense poder provar-la de cap manera:
 
 - **Les parades per GPS.** L'endpoint de parades accepta un filtre CQL, però
-  no se n'ha pogut confirmar la sintaxi. Es proven dues formes, `DWITHIN` i
-  després `BBOX`, i si cap funciona es mostra un error clar. Com que no en
-  sabem la resposta exacta, aquest camí encara prova diversos noms de camp
-  (`CODI_PARADA`, `codi`, `NOM_PARADA`…) per treure codi i nom de cada parada.
+  no se n'ha pogut confirmar ni la sintaxi ni com es diu la columna de
+  geometria. Es proven quatre combinacions —`DWITHIN` i `BBOX`, per
+  `GEOMETRIA` i per `geometria`—, i també diversos noms de camp
+  (`CODI_PARADA`, `codi`, `NOM_PARADA`…) per treure codi i nom de cada
+  parada.
+
+  **Cada intent deixa rastre al log**, amb el nom de la combinació, el codi
+  HTTP i el que ha contestat el servidor. Amb `pebble logs` mentre fas una
+  cerca es veu quina funciona, o per què no en funciona cap, i llavors es pot
+  deixar només la bona. Si cap contesta, el rellotge mostra l'error de debò
+  en comptes de dir que no hi ha cap parada a prop, que és el que feia abans
+  i és el que ho ha fet impossible de diagnosticar.
 
 El camí d'iBus, en canvi, ja està escrit contra la resposta de debò: temps
 d'arribada absoluts dins de `parades[].linies_trajectes[].propers_busos[]`,

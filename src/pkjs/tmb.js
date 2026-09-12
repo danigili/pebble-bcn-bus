@@ -68,23 +68,39 @@ function buildIbusUrl(stopCode) {
   return BASE + '/ibus/stops/' + encodeURIComponent(stopCode) + '?' + auth();
 }
 
-// The stops endpoint takes a CQL filter. We could not verify which spatial
-// predicate it accepts, so try the distance form first and fall back to a
-// bounding box, which is the more widely supported of the two.
+// The stops endpoint takes a CQL filter, and which spatial predicate it
+// accepts has never been confirmed against the live service. So this returns
+// a list of candidates to be tried in turn, each with a name, because the
+// one that works is worth knowing: the caller logs it.
+//
+// Two unknowns, four combinations. The predicate (a distance query, or the
+// bounding box that is more widely supported), and the case of the geometry
+// column: CQL attribute names are case sensitive, and every other property
+// of these stops comes back shouting (CODI_PARADA, NOM_PARADA), so the
+// column is as likely to be GEOMETRIA as geometria.
 function buildNearbyUrls(lat, lon, radius) {
   var base = BASE + '/transit/parades?' + auth();
   var dLat = radius / 111320;
   var dLon = radius / (111320 * Math.max(0.1, Math.cos(lat * Math.PI / 180)));
+  var out = [];
 
-  var dwithin = 'DWITHIN(geometria,POINT(' + lon + ' ' + lat + '),' +
-                radius + ',meters)';
-  var bbox = 'BBOX(geometria,' + (lon - dLon) + ',' + (lat - dLat) + ',' +
-             (lon + dLon) + ',' + (lat + dLat) + ')';
-
-  return [
-    base + '&filter=' + encodeURIComponent(dwithin),
-    base + '&filter=' + encodeURIComponent(bbox)
-  ];
+  var columns = ['GEOMETRIA', 'geometria'];
+  for (var i = 0; i < columns.length; i++) {
+    var column = columns[i];
+    out.push({
+      name: 'DWITHIN/' + column,
+      url: base + '&filter=' + encodeURIComponent(
+          'DWITHIN(' + column + ',POINT(' + lon + ' ' + lat + '),' +
+          radius + ',meters)')
+    });
+    out.push({
+      name: 'BBOX/' + column,
+      url: base + '&filter=' + encodeURIComponent(
+          'BBOX(' + column + ',' + (lon - dLon) + ',' + (lat - dLat) + ',' +
+          (lon + dLon) + ',' + (lat + dLat) + ')')
+    });
+  }
+  return out;
 }
 
 function listOf(value) {

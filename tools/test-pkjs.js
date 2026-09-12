@@ -224,11 +224,22 @@ truthy('the app ships with credentials', !!TMB.APP_ID && !!TMB.APP_KEY);
 check('ibus url', TMB.buildIbusUrl('366'),
       'https://api.tmb.cat/v1/ibus/stops/366?' + auth);
 
+// Neither the predicate nor the case of the geometry column has ever been
+// confirmed against the live service, so every combination gets a turn and
+// each carries the name that the log will print.
 var urls = TMB.buildNearbyUrls(41.3874, 2.1686, 500);
-check('two nearby strategies are tried', urls.length, 2);
-truthy('first strategy is the distance filter', urls[0].indexOf('DWITHIN') > 0);
-truthy('second strategy is the bounding box', urls[1].indexOf('BBOX') > 0);
-truthy('credentials travel on both', urls[1].indexOf(auth) > 0);
+check('every combination of predicate and column is tried', urls.length, 4);
+check('each one is named for the log',
+      urls.map(function (u) { return u.name; }),
+      ['DWITHIN/GEOMETRIA', 'BBOX/GEOMETRIA', 'DWITHIN/geometria',
+       'BBOX/geometria']);
+truthy('the distance filter goes first, in the case the properties use',
+       decodeURIComponent(urls[0].url).indexOf(
+           'DWITHIN(GEOMETRIA,POINT(2.1686 41.3874),500,meters)') > 0);
+truthy('the bounding box is built around the fix',
+       decodeURIComponent(urls[1].url).indexOf('BBOX(GEOMETRIA,2.16') > 0);
+truthy('credentials travel on all of them',
+       urls.every(function (u) { return u.url.indexOf(auth) > 0; }));
 
 console.log('\nparseNearby');
 

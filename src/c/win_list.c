@@ -3,12 +3,17 @@
 // One window serves both the favourites and the nearby list: they differ
 // only in where the stops come from and whether they need loading.
 
+// Four candidate queries at fifteen seconds each is the worst the phone can
+// take before it gives up, so wait past that and then stop waiting.
+#define ANSWER_MS 70000
+
 static Window     *s_window;
 static StatusBarLayer *s_status;
 static MenuLayer  *s_menu;
 static CommHandler s_prev_handler;
 static bool        s_nearby_mode;
 static DataState   s_state;
+static AppTimer   *s_answer_timer;
 
 static int item_count(void) {
   return s_nearby_mode ? g_nearby_count : favs_count();
@@ -77,8 +82,24 @@ static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
   if (stop != NULL) win_stop_push(stop);
 }
 
+// Nothing came back at all: no phone in range, or its side never got as far
+// as answering. Either way, saying so beats spinning for ever.
+static void answer_timed_out(void *data) {
+  s_answer_timer = NULL;
+  if (!s_nearby_mode || s_state != DS_LOADING) return;
+
+  str_copy(g_error, i18n(T_NO_PHONE), ERR_LEN);
+  s_state = DS_ERROR;
+  if (s_menu != NULL) menu_layer_reload_data(s_menu);
+}
+
 static void on_message(int msg_type) {
   if (s_menu == NULL) return;
+
+  if (s_answer_timer != NULL) {
+    app_timer_cancel(s_answer_timer);
+    s_answer_timer = NULL;
+  }
 
   if (s_nearby_mode && msg_type == MSG_NEARBY) {
     s_state = (g_nearby_count > 0) ? DS_OK : DS_EMPTY;
@@ -121,6 +142,9 @@ static void window_appear(Window *window) {
 }
 
 static void window_unload(Window *window) {
+  if (s_answer_timer != NULL) app_timer_cancel(s_answer_timer);
+  s_answer_timer = NULL;
+
   comm_set_handler(s_prev_handler);
   status_bar_layer_destroy(s_status);
   s_status = NULL;
@@ -144,7 +168,9 @@ static void push(bool nearby_mode) {
 
   if (nearby_mode) {
     g_nearby_count = 0;
+    g_error[0] = '\0';
     comm_req_nearby();
+    s_answer_timer = app_timer_register(ANSWER_MS, answer_timed_out, NULL);
   }
 }
 

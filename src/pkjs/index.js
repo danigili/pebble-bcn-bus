@@ -30,6 +30,8 @@ var MSG_NEARBY = 5;
 
 var LANGS = { ca: 0, es: 1, en: 2 };
 
+var MAX_NEARBY = 16;   // the watch keeps this many
+
 // Kept short: the watch truncates these to 47 characters.
 var TEXT = {
   ca: { creds: 'Credencials rebutjades', net: 'Sense connexio',
@@ -111,14 +113,14 @@ function httpGet(url, onOk, onFail) {
       try {
         json = JSON.parse(request.responseText);
       } catch (e) {
-        onFail(request.status, text('http'));
+        onFail(request.status, text('http'), request.responseText);
         return;
       }
       onOk(json);
     } else if (request.status === 401 || request.status === 403) {
-      onFail(request.status, text('creds'));
+      onFail(request.status, text('creds'), request.responseText);
     } else {
-      onFail(request.status, text('http'));
+      onFail(request.status, text('http'), request.responseText);
     }
   };
   request.onerror = function () { onFail(0, text('net')); };
@@ -178,21 +180,38 @@ function handleTimes(code) {
   });
 }
 
-function tryNearby(urls, index, lat, lon) {
+// Works through the candidate queries until one answers with stops. Every
+// attempt says what it did in the log, and a failure is carried to the end
+// rather than dropped: an unusable filter and an empty patch of countryside
+// used to reach the watch as the same "no stops nearby", which is why this
+// has been impossible to tell apart from a bug.
+function tryNearby(urls, index, lat, lon, failure) {
   if (index >= urls.length) {
-    sendError(text('none'));
+    sendError(failure || text('none'));
     return;
   }
 
-  httpGet(urls[index], function (json) {
-    var stops = TMB.parseNearby(json, lat, lon).slice(0, 16);
+  var attempt = urls[index];
+
+  httpGet(attempt.url, function (json) {
+    var stops = TMB.parseNearby(json, lat, lon).slice(0, MAX_NEARBY);
+
     if (stops.length === 0) {
-      tryNearby(urls, index + 1, lat, lon);
+      // A good answer we made nothing of: the shape, so the property names
+      // it really uses can be read off the log.
+      console.log('nearby ' + attempt.name + ': no stops in ' +
+                  JSON.stringify(json).substring(0, 300));
+      tryNearby(urls, index + 1, lat, lon, failure);
       return;
     }
+
+    console.log('nearby ' + attempt.name + ': ' + stops.length + ' stops, ' +
+                'nearest ' + Math.round(stops[0].dist) + 'm');
     send({ MSG_TYPE: MSG_NEARBY, PAYLOAD: TMB.encodeStops(stops) });
-  }, function () {
-    tryNearby(urls, index + 1, lat, lon);
+  }, function (status, message, body) {
+    console.log('nearby ' + attempt.name + ': HTTP ' + status + ' ' +
+                String(body || '').substring(0, 200));
+    tryNearby(urls, index + 1, lat, lon, status ? message : failure);
   });
 }
 
@@ -202,9 +221,17 @@ function handleNearby() {
   navigator.geolocation.getCurrentPosition(function (position) {
     var lat = position.coords.latitude;
     var lon = position.coords.longitude;
-    tryNearby(TMB.buildNearbyUrls(lat, lon, settings.radius || 500),
-              0, lat, lon);
-  }, function () {
+    var radius = settings.radius || 500;
+
+    // Rounded to about a hundred metres: enough to see at a glance whether
+    // the fix is in Barcelona at all, which is half of what goes wrong here,
+    // without writing someone's doorstep into a log.
+    console.log('nearby: fix near ' + lat.toFixed(3) + ',' + lon.toFixed(3) +
+                ' radius ' + radius + 'm');
+
+    tryNearby(TMB.buildNearbyUrls(lat, lon, radius), 0, lat, lon, null);
+  }, function (error) {
+    console.log('nearby: no position (' + (error && error.message) + ')');
     sendError(text('gps'));
   }, { timeout: 15000, maximumAge: 60000 });
 }
