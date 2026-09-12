@@ -32,8 +32,9 @@ var BASE = 'https://api.tmb.cat/v1';
 var APP_ID  = 'd4ef8b79';
 var APP_KEY = '71f41c220aa7bcada2565b4ce0dd4ddd';
 
-var MAX_PAYLOAD = 900;   // keep well inside the watch's AppMessage inbox
-var MAX_DEST    = 24;
+var MAX_PAYLOAD  = 900;   // keep well inside the watch's AppMessage inbox
+var MAX_DEST     = 24;
+var MAX_PER_LINE = 3;     // nobody is waiting for the fourth bus of one line
 
 var CODE_KEYS = ['CODI_PARADA', 'codi_parada', 'CODI', 'codi', 'ID_PARADA',
                  'stop_code', 'code'];
@@ -260,14 +261,25 @@ function pickStopName(json, code) {
   return raw.length ? sanitize(firstString(raw[0], NAME_KEYS)) : '';
 }
 
+// Everything travels in one string, and the watch keeps a fixed number of
+// arrivals, so the budget is spent per line rather than first come first
+// served: one busy line with a long tail of buses used to push every other
+// line's second bus off the end.
 function encodeArrivals(arrivals) {
   var parts = [];
   var length = 0;
+  var perLine = {};
 
   for (var i = 0; i < arrivals.length; i++) {
     var a = arrivals[i];
+    var key = '#' + a.line;
+    var seen = (perLine[key] || 0) + 1;
+    if (seen > MAX_PER_LINE) continue;
+
     var record = a.line + '|' + a.mins + '|' + a.dest + ';';
     if (length + record.length > MAX_PAYLOAD) break;
+
+    perLine[key] = seen;
     parts.push(record);
     length += record.length;
   }

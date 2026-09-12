@@ -136,6 +136,18 @@ function favouriteName(code) {
   return '';
 }
 
+// For the log: how many distinct lines those arrivals cover, which is what
+// tells a short answer from a stop that simply has one bus per line.
+function countLines(arrivals) {
+  var lines = {};
+  var count = 0;
+  for (var i = 0; i < arrivals.length; i++) {
+    var key = '#' + arrivals[i].line;
+    if (!lines[key]) { lines[key] = true; count++; }
+  }
+  return count;
+}
+
 function handleTimes(code) {
   httpGet(TMB.buildIbusUrl(code), function (json) {
     // Prefer the name the user gave the stop, then whatever the API knows,
@@ -151,6 +163,9 @@ function handleTimes(code) {
     if (arrivals.length === 0) {
       console.log('no arrivals parsed from: ' +
                   JSON.stringify(json).substring(0, 300));
+    } else {
+      console.log('stop ' + code + ': ' + arrivals.length + ' arrivals, ' +
+                  countLines(arrivals) + ' lines');
     }
 
     send({

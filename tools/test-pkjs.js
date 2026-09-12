@@ -194,6 +194,29 @@ for (var i = 0; i < 200; i++) many.push({ line: 'H' + i, mins: i, dest: 'Destina
 truthy('a long arrivals payload is capped for the watch',
        TMB.encodeArrivals(many).length <= 900);
 
+var hogging = [];
+for (var i = 0; i < 6; i++) hogging.push({ line: 'H12', mins: i * 4, dest: 'Gornal' });
+check('one line cannot spend the whole message on itself',
+      TMB.encodeArrivals(hogging).split(';').filter(Boolean).length, 3);
+
+// The watch keeps MAX_ARRIVALS of these, and a line's detail screen wants
+// two of its own, so a busy stop must not spend the room on first buses.
+var busy = [];
+for (var i = 0; i < 14; i++) {
+  busy.push({ line: 'L' + i, mins: i + 1, dest: 'Barceloneta' });
+  busy.push({ line: 'L' + i, mins: i + 10, dest: 'Barceloneta' });
+}
+busy.sort(function (a, b) { return a.mins - b.mins; });
+
+var records = TMB.encodeArrivals(busy).split(';').filter(Boolean).slice(0, 32);
+var perLine = {};
+records.forEach(function (r) {
+  var key = '#' + r.split('|')[0];
+  perLine[key] = (perLine[key] || 0) + 1;
+});
+var withTwo = Object.keys(perLine).filter(function (k) { return perLine[k] >= 2; });
+check('every line at a busy stop keeps its next two', withTwo.length, 14);
+
 console.log('\nURLs');
 
 var auth = 'app_id=' + TMB.APP_ID + '&app_key=' + TMB.APP_KEY;

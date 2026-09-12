@@ -64,6 +64,12 @@ Es parlen per AppMessage. Com que el diccionari d'AppMessage és petit, les
 respostes viatgen empaquetades en una sola cadena (`línia|minuts|destí;…`) en
 comptes d'una clau per camp.
 
+Aquesta cadena té un límit i el rellotge en guarda un nombre fix d'arribades,
+així que el mòbil hi reparteix el lloc **per línia**: com a molt tres busos de
+cadascuna. Altrament, en una parada amb moltes línies els primers busos de
+totes omplen el missatge i el detall d'una línia es queda sense el segon bus,
+que és precisament el que va a buscar.
+
 Les **favorites viuen al rellotge**, que n'és la font de veritat; el mòbil en
 guarda una còpia perquè es puguin editar des de la configuració. Per això
 desar una parada segueix funcionant amb el mòbil fora de cobertura.

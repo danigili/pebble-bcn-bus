@@ -8,7 +8,10 @@
 
 #define MAX_FAVS      12
 #define MAX_NEARBY    16
-#define MAX_ARRIVALS  16
+// Two per line at a stop with a dozen lines, and room to spare: a line's
+// second bus is the whole point of its detail screen, and with sixteen
+// slots the soonest bus of every line filled them all on its own.
+#define MAX_ARRIVALS  32
 
 #define CODE_LEN       7
 #define NAME_LEN      28
