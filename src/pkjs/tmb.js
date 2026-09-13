@@ -261,6 +261,22 @@ function normaliseHex(value) {
   return (hex.length === 6) ? hex : '';
 }
 
+// The watch shows 64 colours: two bits a channel, in one byte. So a colour
+// travels as the two hex digits of that byte rather than as six of a
+// precision the screen cannot show anyway. "E30613" goes as "F0".
+function shortColor(hex) {
+  var full = normaliseHex(hex);
+  if (!full) return '';
+
+  var code = 0xc0;   // the top two bits are the alpha the watch expects
+  for (var i = 0; i < 3; i++) {
+    var channel = parseInt(full.substr(i * 2, 2), 16);
+    code |= Math.round(channel / 85) << (4 - i * 2);
+  }
+  var out = code.toString(16).toUpperCase();
+  return (out.length < 2) ? '0' + out : out;
+}
+
 var LINE_NAME_KEYS  = ['NOM_LINIA', 'nom_linia', 'NOM', 'CODI_LINIA'];
 var LINE_COLOR_KEYS = ['COLOR_LINIA', 'COLOR', 'color_linia', 'color',
                        'route_color', 'COLOR_LINIA_HEX'];
@@ -275,7 +291,7 @@ function parseLineColors(json) {
   for (var i = 0; i < features.length; i++) {
     var props = (features[i] && features[i].properties) || {};
     var name = sanitize(firstString(props, LINE_NAME_KEYS)).toUpperCase();
-    var color = normaliseHex(firstString(props, LINE_COLOR_KEYS));
+    var color = shortColor(firstString(props, LINE_COLOR_KEYS));
     if (name && color) out[name] = color;
   }
   return out;
@@ -433,6 +449,7 @@ var TMB = {
   buildLinesUrl: buildLinesUrl,
   parseLineColors: parseLineColors,
   normaliseHex: normaliseHex,
+  shortColor: shortColor,
   parseArrivals: parseArrivals,
   parseStopIndex: parseStopIndex,
   nearestStops: nearestStops,

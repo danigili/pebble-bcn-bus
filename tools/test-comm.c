@@ -96,16 +96,16 @@ int main(void) {
   // The phone writes a line's destination and colour on its first bus and
   // leaves them off the rest.
   char buffer[PAYLOAD_LEN];
-  str_copy(buffer, "V29|3|Diagonal Mar|E30613;V31|11|Forum|1B3D8F;"
+  str_copy(buffer, "V29|3|Diagonal Mar|F0;V31|11|Forum|C6;"
                    "V29|22|;V31|30|;", sizeof(buffer));
   parse_arrivals(buffer);
 
   checks++;
   if (g_arrival_count == 4 &&
       strcmp(g_arrivals[2].dest, "Diagonal Mar") == 0 &&
-      g_arrivals[2].color == 0xE30613 &&
+      g_arrivals[2].color == 0xFF0000 &&
       strcmp(g_arrivals[3].dest, "Forum") == 0 &&
-      g_arrivals[3].color == 0x1B3D8F) {
+      g_arrivals[3].color == 0x0055AA) {
     printf("  ok   a second bus inherits its line's destination and colour\n");
   } else {
     failures++;
@@ -114,13 +114,13 @@ int main(void) {
            g_arrivals[3].dest, (unsigned)g_arrivals[3].color);
   }
 
-  str_copy(buffer, "V29|3|Diagonal Mar|E30613;V29|22|Fabra i Puig|1B3D8F;",
+  str_copy(buffer, "V29|3|Diagonal Mar|F0;V29|22|Fabra i Puig|C6;",
            sizeof(buffer));
   parse_arrivals(buffer);
 
   checks++;
   if (strcmp(g_arrivals[1].dest, "Fabra i Puig") == 0 &&
-      g_arrivals[1].color == 0x1B3D8F) {
+      g_arrivals[1].color == 0x0055AA) {
     printf("  ok   but keeps its own when it is given one\n");
   } else {
     failures++;

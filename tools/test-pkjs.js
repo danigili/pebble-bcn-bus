@@ -266,8 +266,13 @@ var palette = TMB.parseLineColors({ features: [
   { properties: { NOM_LINIA: 'X1' } },
   { properties: { COLOR_LINIA: 'D6001C' } }
 ] });
-check('a colour per line, by the name on the bus', palette,
-      { V29: 'E30613', B24: 'FFD800', H12: '008EC1' });
+check('a colour per line, by the name on the bus, as a short code', palette,
+      { V29: 'F0', B24: 'FC', H12: 'CA' });
+check('red stays red', TMB.shortColor('#E30613'), 'F0');
+check('yellow stays yellow', TMB.shortColor('FFD800'), 'FC');
+check('black is a code too, not an absence', TMB.shortColor('000000'), 'C0');
+check('white as well', TMB.shortColor('FFFFFF'), 'FF');
+check('no colour, no code', TMB.shortColor('blau'), '');
 check('a hash makes no difference', TMB.normaliseHex('#E30613'), 'E30613');
 check('nor does the case', TMB.normaliseHex('e30613'), 'E30613');
 check('eight digits are a colour with transparency',
@@ -275,10 +280,10 @@ check('eight digits are a colour with transparency',
 check('anything else is no colour at all', TMB.normaliseHex('blau'), '');
 check('and so is nothing', TMB.normaliseHex(undefined), '');
 
-check('a colour travels as a fourth field',
+check('a colour travels as a fourth field, two characters wide',
       TMB.encodeArrivals([{ line: 'V29', mins: 3, dest: 'Diagonal Mar',
-                            color: 'E30613' }]),
-      'V29|3|Diagonal Mar|E30613;');
+                            color: 'F0' }]),
+      'V29|3|Diagonal Mar|F0;');
 check('a line with no colour simply leaves it off',
       TMB.encodeArrivals([{ line: 'V29', mins: 3, dest: 'Diagonal Mar' }]),
       'V29|3|Diagonal Mar;');
@@ -288,9 +293,9 @@ check('a line with no colour simply leaves it off',
 var busy = [];
 for (var b = 0; b < 15; b++) {
   busy.push({ line: 'L' + b, mins: b + 1, dest: 'Pont del Treball Digne',
-              color: 'E30613' });
+              color: 'F0' });
   busy.push({ line: 'L' + b, mins: b + 10, dest: 'Pont del Treball Digne',
-              color: 'E30613' });
+              color: 'F0' });
 }
 busy.sort(function (x, y) { return x.mins - y.mins; });
 

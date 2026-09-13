@@ -109,6 +109,11 @@ Cada línia es dibuixa amb **el seu color oficial**, que ve de
 `/transit/linies/bus`: el mòbil se'l baixa un cop, se'l guarda un mes com fa
 amb les parades, i l'envia al rellotge amb les arribades.
 
+Hi viatja **en dos caràcters**, no en sis. La pantalla del rellotge té 64
+colors —dos bits per canal, un byte— i aquest byte és el codi: `E30613` de
+la V29 hi va com a `F0`. No es perd res que es pogués veure, i el missatge
+cap al rellotge s'estalvia quatre caràcters per línia.
+
 Abans es deduïa de la primera lletra —totes les V liles, tot el que no fos
 H/V/D/N/X vermell—, i això és senzillament fals: la V29 és vermella i la B24
 groga. La deducció es manté només per a les línies de què TMB no ens digui

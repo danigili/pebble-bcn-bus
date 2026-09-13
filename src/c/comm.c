@@ -28,6 +28,24 @@ static void copy_payload(Tuple *tuple) {
   if (tuple != NULL) str_copy(s_payload, tuple->value->cstring, PAYLOAD_LEN);
 }
 
+// A colour arrives as the two hex digits of the watch's own colour byte:
+// two bits a channel, which is all the screen has. Spread back out to the
+// hex triplet GColorFromHEX wants. Six digits are taken as they come, and
+// nothing at all means TMB had no colour for that line.
+static uint32_t parse_color(const char *text) {
+  if (text == NULL || text[0] == '\0') return 0;
+
+  uint32_t value = (uint32_t)strtoul(text, NULL, 16);
+  if (strlen(text) > 2) return value;
+
+  uint32_t hex = 0;
+  for (int i = 0; i < 3; i++) {
+    uint32_t channel = (value >> (4 - i * 2)) & 0x3;
+    hex |= (channel * 85) << (16 - i * 8);
+  }
+  return hex;
+}
+
 // A bus with no estimate goes last, never first.
 static int wait_of(const Arrival *arrival) {
   return (arrival->mins < 0) ? 100000 : arrival->mins;
@@ -68,9 +86,7 @@ static void parse_arrivals(char *payload) {
     str_copy(arrival->line, line, LINE_LEN);
     str_copy(arrival->dest, dest ? dest : "", DEST_LEN);
     arrival->mins = (mins && mins[0]) ? atoi(mins) : -1;
-    // Six hex digits, or nothing at all for a line TMB has no colour for.
-    arrival->color = (color && color[0])
-        ? (uint32_t)strtoul(color, NULL, 16) : 0;
+    arrival->color = parse_color(color);
 
     // Where the destination or the colour were left out, they are the ones
     // already given for this line: the phone only says them once.
