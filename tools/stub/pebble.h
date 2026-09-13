@@ -39,6 +39,8 @@ typedef struct GBitmap GBitmap;
 #define FONT_KEY_GOTHIC_18_BOLD "g18b"
 #define FONT_KEY_GOTHIC_24_BOLD "g24b"
 #define FONT_KEY_GOTHIC_28_BOLD "g28b"
+#define FONT_KEY_BITHAM_30_BLACK "b30b"
+#define FONT_KEY_BITHAM_42_BOLD "b42b"
 GFont fonts_get_system_font(const char *key);
 
 Layer *layer_create(GRect frame);

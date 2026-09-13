@@ -117,23 +117,49 @@ static void draw_header(GContext *ctx, GRect bounds, int y) {
                      GTextOverflowModeFill, GTextAlignmentRight, NULL);
 }
 
-// "8 min", or the word for a bus pulling in, or "--" with no estimate.
-// Written into one of two buffers in turn, so both can be joined in one go.
-static const char *minutes_of(const Arrival *arrival) {
-  static char s_text[2][20];
-  static int s_turn;
+// How long to wait, drawn as large as the screen allows: the number is what
+// someone at a stop is reading, so it gets the big type and the unit sits
+// beside it in small. Numbers are right-aligned to a column and units left-
+// aligned after it, which lines the two buses up under each other.
+//
+// A bus that is pulling in has a word instead of a number, and a word that
+// long only fits across the whole row.
+static void draw_wait(GContext *ctx, GRect row, const Arrival *arrival) {
+  bool wide = row.size.w >= 180;
+  int mid = row.origin.y + row.size.h / 2;
 
-  char *out = s_text[s_turn];
-  s_turn = (s_turn + 1) % 2;
+  graphics_context_set_text_color(ctx, GColorBlack);
 
-  if (arrival->mins < 0) {
-    str_copy(out, "--", sizeof(s_text[0]));
-  } else if (arrival->mins == 0) {
-    str_copy(out, i18n(T_ARRIVING), sizeof(s_text[0]));
-  } else {
-    snprintf(out, sizeof(s_text[0]), "%d %s", arrival->mins, i18n(T_MIN));
+  if (arrival->mins == 0) {
+    const char *font = wide ? FONT_KEY_GOTHIC_28_BOLD : FONT_KEY_GOTHIC_24_BOLD;
+    graphics_draw_text(ctx, i18n(T_ARRIVING), fonts_get_system_font(font),
+                       GRect(4, mid - 18, row.size.w - 8, 36),
+                       GTextOverflowModeFill, GTextAlignmentCenter, NULL);
+    return;
   }
-  return out;
+
+  char number[12];
+  if (arrival->mins < 0) {
+    str_copy(number, "--", sizeof(number));
+  } else {
+    snprintf(number, sizeof(number), "%d", arrival->mins);
+  }
+
+  int column = row.size.w * 52 / 100;   // where the numbers end and min begins
+  int big_h = wide ? 46 : 34;
+
+  graphics_draw_text(ctx, number,
+                     fonts_get_system_font(wide ? FONT_KEY_BITHAM_42_BOLD
+                                                : FONT_KEY_BITHAM_30_BLACK),
+                     GRect(4, mid - big_h / 2 - 2, column - 4, big_h + 4),
+                     GTextOverflowModeFill, GTextAlignmentRight, NULL);
+
+  graphics_draw_text(ctx, i18n(T_MIN),
+                     fonts_get_system_font(wide ? FONT_KEY_GOTHIC_24_BOLD
+                                                : FONT_KEY_GOTHIC_18),
+                     GRect(column + 5, mid - (wide ? 14 : 11),
+                           row.size.w - column - 9, wide ? 28 : 22),
+                     GTextOverflowModeFill, GTextAlignmentLeft, NULL);
 }
 
 static void layer_update(Layer *layer, GContext *ctx) {
@@ -160,40 +186,32 @@ static void layer_update(Layer *layer, GContext *ctx) {
     return;
   }
 
-  // Both times on one line -- "8 min \u00b7 23 min" -- so whether the one
-  // after next shows up never depends on a second row drawing. The middle
-  // dot is written as its UTF-8 bytes, and the joining is snprintf's, which
-  // the rest of the app already leans on.
-  char shown[48];
-  if (count > 1) {
-    snprintf(shown, sizeof(shown), "%s \xc2\xb7 %s",
-             minutes_of(next[0]), minutes_of(next[1]));
-  } else {
-    str_copy(shown, minutes_of(next[0]), sizeof(shown));
-  }
+  // Two rows, one bus each, because at 144 px wide there is no way to put
+  // both times on one line and still have them readable -- which is what
+  // they are for.
+  int row_h = body_h / SHOWN_BUSES;
 
-  // "8 min \u00b7 23 min" is about 150 px of Gothic 24 and a Basalt is 144
-  // wide, so with two of them on a narrow screen the type gives way rather
-  // than the second number.
-  const char *font = FONT_KEY_GOTHIC_28_BOLD;
-  if (count > 1) {
-    font = (bounds.size.w >= 180) ? FONT_KEY_GOTHIC_24_BOLD
-                                  : FONT_KEY_GOTHIC_18_BOLD;
-  }
+  for (int i = 0; i < SHOWN_BUSES; i++) {
+    GRect row = GRect(0, body_y + i * row_h, bounds.size.w, row_h);
 
-  int text_y = body_y + (body_h - 40) / 2;
-  graphics_context_set_text_color(ctx, GColorBlack);
-  graphics_draw_text(ctx, shown, fonts_get_system_font(font),
-                     GRect(2, text_y, bounds.size.w - 4, 40),
-                     GTextOverflowModeFill, GTextAlignmentCenter, NULL);
+    if (i > 0) {
+      graphics_context_set_stroke_color(ctx, GColorBlack);
+      graphics_draw_line(ctx, GPoint(row.origin.x + 6, row.origin.y),
+                         GPoint(row.origin.x + row.size.w - 6, row.origin.y));
+    }
 
-  // Nothing behind it: say so, rather than leaving it to be wondered about.
-  if (count < 2) {
-    graphics_draw_text(ctx, i18n(T_NO_MORE),
-                       fonts_get_system_font(FONT_KEY_GOTHIC_14),
-                       GRect(4, text_y + 38, bounds.size.w - 8, 20),
-                       GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter,
-                       NULL);
+    if (i < count) {
+      draw_wait(ctx, row, next[i]);
+    } else {
+      // Nothing behind it: say so, rather than leaving half a screen blank.
+      graphics_context_set_text_color(ctx, GColorBlack);
+      graphics_draw_text(ctx, i18n(T_NO_MORE),
+                         fonts_get_system_font(FONT_KEY_GOTHIC_14),
+                         GRect(4, row.origin.y + row.size.h / 2 - 10,
+                               row.size.w - 8, 20),
+                         GTextOverflowModeTrailingEllipsis,
+                         GTextAlignmentCenter, NULL);
+    }
   }
 }
 
