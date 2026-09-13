@@ -7,20 +7,22 @@ GColor ui_arrival_color(const Arrival *arrival) {
   return ui_line_color(arrival->line);
 }
 
-// Where TMB has not told us the colour, it is guessed from the line family: the H (horizontal), V (vertical)
-// and D (diagonal) lines of the Nova Xarxa each have their own colour, night
-// buses are dark blue and the conventional numbered lines are the classic
-// TMB red. Close enough that a glance at the badge tells you the family.
+// A stopgap for the lines TMB has not given us a colour for, which in
+// practice means the first seconds after an install, before the phone has
+// the line list. It goes by family, and being a guess it is only ever
+// roughly right: V lines are green and the AMB's are yellow because that is
+// what they turned out to be, the rest is the Nova Xarxa read off a map.
 GColor ui_line_color(const char *line) {
 #ifdef PBL_COLOR
   uint32_t hex;
   switch (line[0]) {
-    case 'H': hex = 0x008EC1; break;
-    case 'V': hex = 0x7C3F98; break;
-    case 'D': hex = 0x00A94F; break;
-    case 'N': hex = 0x1B3D8F; break;
-    case 'X': hex = 0xEF7C00; break;
-    default:  hex = 0xD6001C; break;
+    case 'H': hex = 0x008EC1; break;   // horizontal, light blue
+    case 'V': hex = 0x00A94F; break;   // vertical, green
+    case 'D': hex = 0x7C3F98; break;   // diagonal, purple
+    case 'N': hex = 0x1B3D8F; break;   // night, dark blue
+    case 'X': hex = 0xEF7C00; break;   // express, orange
+    case 'B': hex = 0xFFD800; break;   // the AMB's, yellow
+    default:  hex = 0xD6001C; break;   // the numbered lines, TMB red
   }
   return GColorFromHEX(hex);
 #else

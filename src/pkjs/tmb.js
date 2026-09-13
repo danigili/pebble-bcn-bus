@@ -161,12 +161,16 @@ function fromParades(json, code) {
     var dest = sanitize(trip.desti_trajecte).substring(0, MAX_DEST);
     var buses = listOf(trip.propers_busos);
 
+    // Who runs it. The line list only covers the ones TMB operates, so an
+    // AMB line has no colour to look up and this is what it falls back on.
+    var amb = (trip.transit_namespace === 'amb');
+
     // One row per bus, not per line: the next two buses of the same line,
     // ten minutes apart, is exactly what someone at the stop wants to see.
     for (var j = 0; j < buses.length; j++) {
       var mins = minutesUntil(buses[j] && buses[j].temps_arribada, now);
       if (mins === null) continue;
-      out.push({ line: line, mins: mins, dest: dest });
+      out.push({ line: line, mins: mins, dest: dest, amb: amb });
     }
   }
   return out;

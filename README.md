@@ -114,10 +114,13 @@ colors —dos bits per canal, un byte— i aquest byte és el codi: `E30613` de
 la V29 hi va com a `F0`. No es perd res que es pogués veure, i el missatge
 cap al rellotge s'estalvia quatre caràcters per línia.
 
-Abans es deduïa de la primera lletra —totes les V liles, tot el que no fos
-H/V/D/N/X vermell—, i això és senzillament fals: la V29 és vermella i la B24
-groga. La deducció es manté només per a les línies de què TMB no ens digui
-el color.
+Aquella llista, però, només porta **les línies que opera TMB**. Les dels
+altres operadors de l'AMB no hi són, i es reconeixen per la resposta mateixa
+(`transit_namespace: "amb"`): van amb el groc de l'AMB, que és el que els
+toca. La B24 sortia vermella per això.
+
+La deducció per la primera lletra només queda per als primers segons després
+d'instal·lar, abans que el mòbil tingui la llista.
 
 ### El teclat
 

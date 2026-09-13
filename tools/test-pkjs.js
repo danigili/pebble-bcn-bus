@@ -55,6 +55,10 @@ check('a waiting time is rounded down, not up',
       TMB.parseArrivals(live, '1178')[2].mins, 22);
 check('a line run by another AMB operator is a line like any other',
       TMB.parseArrivals(live, '1178')[3].line, 'B24');
+// TMB's line list has only TMB's lines, so this is how the others are known.
+check('and is marked as the AMB\'s, since its colour is not in TMB\'s list',
+      TMB.parseArrivals(live, '1178')[3].amb, true);
+check('while a TMB line is not', TMB.parseArrivals(live, '1178')[0].amb, false);
 
 // The older /ibus/stops answer, copied from that endpoint: one entry per
 // line, the waiting time already worked out, and no stop name in it. Still

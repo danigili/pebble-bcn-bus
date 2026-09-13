@@ -128,12 +128,17 @@ function refreshLineColors() {
   }, STOPS_TIMEOUT);
 }
 
+// The AMB's own yellow, for the lines its operators run: they are not in
+// TMB's line list, so there is no colour of theirs to look up.
+var AMB_COLOR = TMB.shortColor('FFD800');
+
 function paint(arrivals) {
   var cached = loadLineColors();
   var colors = (cached && cached.colors) || {};
 
   for (var i = 0; i < arrivals.length; i++) {
-    arrivals[i].color = colors[arrivals[i].line.toUpperCase()] || '';
+    var known = colors[arrivals[i].line.toUpperCase()];
+    arrivals[i].color = known || (arrivals[i].amb ? AMB_COLOR : '');
   }
   return arrivals;
 }
