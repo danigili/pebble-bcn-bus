@@ -4,13 +4,13 @@ static Lang s_lang = LANG_CA;
 
 static const char *const s_strings[T_STR_COUNT][LANG_COUNT] = {
   // Catalan            Spanish              English
-  { "Favorites",        "Favoritas",         "Favourites"      },  // T_FAVOURITES
+  { "Preferides",       "Favoritas",         "Favourites"      },  // T_FAVOURITES
   { "A prop meu",       "Cerca de mí",  "Nearby"          },  // T_NEARBY
   { "Cercar per codi",  "Buscar por código", "Search by code" }, // T_BY_CODE
   { "Carregant…",  "Cargando…",    "Loading…"   },  // T_LOADING
   { "Cap bus ara",      "Ningún bus",   "No buses now"    },  // T_NO_BUSES
   { "Error",            "Error",             "Error"           },  // T_ERROR
-  { "Cap favorita",     "Sin favoritas",     "No favourites"   },  // T_NO_FAVS
+  { "Cap preferida",    "Sin favoritas",     "No favourites"   },  // T_NO_FAVS
   { "Cap parada a prop","Ninguna cerca",     "None nearby"     },  // T_NO_NEARBY
   { "Arribant",         "Llegando",          "Arriving"        },  // T_ARRIVING
   { "min",              "min",               "min"             },  // T_MIN
@@ -23,7 +23,7 @@ static const char *const s_strings[T_STR_COUNT][LANG_COUNT] = {
     "Arriba/Abajo: cifra\nCentral: nueva cifra",
     "Up/Down: digit\nSelect: new digit" },                       // T_BTN_LEGEND
   { "Sense mòbil", "Sin móvil",    "No phone"        },  // T_NO_PHONE
-  { "Favorites plenes", "Favoritas llenas",  "Favourites full" },  // T_FAV_FULL
+  { "Preferides plenes","Favoritas llenas",  "Favourites full" },  // T_FAV_FULL
   { "Mantén per desar", "Mantén para guardar", "Hold to save" }, // T_HOLD_TO_SAVE
   { "Parada",           "Parada",            "Stop"            },  // T_STOP
   { "Cap més previst",  "Ninguno más",       "No more yet"     },  // T_NO_MORE

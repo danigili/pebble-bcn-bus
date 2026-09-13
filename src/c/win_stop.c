@@ -94,13 +94,13 @@ static void draw_header(GContext *ctx, const Layer *cell, uint16_t section,
   graphics_context_set_text_color(ctx, GColorWhite);
   graphics_draw_text(ctx, s_toast[0] ? s_toast : s_stop.name,
                      fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                     GRect(4, -3, bounds.size.w - 22, bounds.size.h),
+                     GRect(4, -3, bounds.size.w - 26, bounds.size.h),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 
-  // A filled dot marks a saved stop: no font is guaranteed to carry a star.
+  // A star marks a stop that has been kept.
   if (is_fav) {
     graphics_context_set_fill_color(ctx, GColorWhite);
-    graphics_fill_circle(ctx, GPoint(bounds.size.w - 11, bounds.size.h / 2), 4);
+    ui_draw_star(ctx, GPoint(bounds.size.w - 13, bounds.size.h / 2), 9);
   }
 }
 

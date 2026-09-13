@@ -62,7 +62,7 @@ function buildConfigPage(settings, favourites) {
     '<label for="radius">Radi de cerca per GPS (metres)</label>',
     '<input id="radius" type="number" min="100" max="2000" step="50">',
 
-    '<h2>Favorites</h2>',
+    '<h2>Preferides</h2>',
     '<div class="hint" style="margin:0 0 10px">Tamb&eacute; pots desar-les des ',
     'del rellotge mantenint premut el bot&oacute; central a la pantalla d\'una parada.</div>',
     '<div id="favs"></div>',

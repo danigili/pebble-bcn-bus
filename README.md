@@ -6,7 +6,7 @@ de Barcelona.
 
 Tres maneres d'arribar a una parada, i una sola manera de desar-la:
 
-- **Favorites** — les parades que fas servir cada dia.
+- **Preferides** — les parades que fas servir cada dia.
 - **A prop meu** — busca parades per GPS.
 - **Cercar per codi** — tecleja el codi imprès al pal de la parada.
 
@@ -26,7 +26,7 @@ cop d'ull. Totes dues pantalles es
 refresquen soles cada 30 s.
 
 Des de la pantalla d'una parada, **mantén premut el botó central** per desar-la
-a favorites o treure-la. Funciona igual hi hagis arribat com hi hagis arribat.
+a preferides o treure-la; una **estrella** a la capçalera diu si ja hi és. Funciona igual hi hagis arribat com hi hagis arribat.
 
 **L'hora surt a dalt de totes les pantalles.** La dibuixa la barra d'estat del
 sistema (`StatusBarLayer`), o sigui que és el rellotge del rellotge, amb el
@@ -66,7 +66,7 @@ hi ha cap mòbil ni cap IP pel mig.
 
 El rellotge no té connexió a internet, així que l'app són dos programes:
 
-    src/c/      codi del rellotge: pantalles, botons, favorites
+    src/c/      codi del rellotge: pantalles, botons, preferides
     src/pkjs/   JavaScript que corre al mòbil: crides HTTPS a l'API de TMB
 
 Es parlen per AppMessage. Com que el diccionari d'AppMessage és petit, les
@@ -88,7 +88,7 @@ següent de cada línia, i llavors els tercers. El rellotge els torna a
 ordenar per temps en rebre'ls, de manera que la llista de la parada es
 llegeix com un plafó de sortides.
 
-Les **favorites viuen al rellotge**, que n'és la font de veritat; el mòbil en
+Les **preferides viuen al rellotge**, que n'és la font de veritat; el mòbil en
 guarda una còpia perquè es puguin editar des de la configuració. Per això
 desar una parada segueix funcionant amb el mòbil fora de cobertura.
 
@@ -144,7 +144,7 @@ queda una, surt de la pantalla. No es fa servir la pantalla tàctil enlloc.
 
 Comprova el JavaScript del mòbil amb Node, i compila la lògica del rellotge
 per a l'ordinador contra uns *stubs* de `pebble.h` per verificar el parsing,
-les favorites i el descodificador de missatges —aquest darrer incloent
+les preferides i el descodificador de missatges —aquest darrer incloent
 `comm.c` en comptes d'enllaçar-lo, per poder provar el codi de debò i no una
 còpia. També comprova que el codi compila per a totes les plataformes.
 No substitueix provar-ho al rellotge, però atrapa el que es pot atrapar sense
@@ -162,14 +162,14 @@ Els botons del rellotge es mapegen al teclat: `Q` enrere, `W` amunt, `S`
 central, `X` avall (o les fletxes). Per mantenir premut un botó, mantén la
 tecla: per cercar un codi, deixa `S` premuda mig segon.
 
-Per tocar l'idioma, el radi de cerca o les favorites, amb **l'app oberta a
+Per tocar l'idioma, el radi de cerca o les preferides, amb **l'app oberta a
 l'emulador**, executa en una altra terminal:
 
     pebble emu-app-config
 
 La pantalla de configuració s'obre al navegador de l'escriptori, no dins de
 l'emulador. En desar, torna per una URL local que el simulador de telèfon
-recull, i des d'allà les preferències es guarden i les favorites baixen al
+recull, i des d'allà les preferències es guarden i les preferides baixen al
 rellotge. Si has sortit de l'app i ets a l'esfera, el comandament no trobarà
 cap configuració a obrir.
 
@@ -217,7 +217,7 @@ com vénen: recalcular-los de `t-in-s` faria que 596 segons es veiessin com
 a 10 min quan TMB en diu 9 a tot arreu.
 
 Cap de les dues respostes porta el nom de la parada: el que es veu és el que
-ja té el rellotge, de les favorites o de la cerca per GPS.
+ja té el rellotge, de les preferides o de la cerca per GPS.
 
 El camí d'iBus, en canvi, ja està escrit contra la resposta de debò: temps
 d'arribada absoluts dins de `parades[].linies_trajectes[].propers_busos[]`,

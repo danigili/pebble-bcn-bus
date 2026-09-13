@@ -139,7 +139,7 @@ int main(void) {
   lang_set(LANG_EN);
   check_str("english", i18n(T_FAVOURITES), "Favourites");
   lang_set(LANG_CA);
-  check_str("catalan", i18n(T_FAVOURITES), "Favorites");
+  check_str("catalan", i18n(T_FAVOURITES), "Preferides");
   check_str("an out of range id is empty, not a crash", i18n((StrId)999), "");
 
   printf("\n%s\n", failures == 0

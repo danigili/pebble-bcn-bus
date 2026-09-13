@@ -135,3 +135,6 @@ GRect  ui_content_bounds(Window *window);
 GColor ui_arrival_color(const Arrival *arrival);
 GColor ui_line_color(const char *line);
 GColor ui_accent(void);
+// The mark on a stop that has been kept, drawn because no font is sure to
+// have a star in it.
+void   ui_draw_star(GContext *ctx, GPoint centre, int radius);
