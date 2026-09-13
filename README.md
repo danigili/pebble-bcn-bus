@@ -11,7 +11,10 @@ Tres maneres d'arribar a una parada, i una sola manera de desar-la:
 - **Cercar per codi** — tecleja el codi imprès al pal de la parada.
 
 En clicar una parada s'obre la seva llista: totes les línies que hi passen,
-ordenades per qui arriba abans. **Seleccionant-ne una** s'obre el detall
+ordenades per qui arriba abans, amb el dorsal i els minuts en gran. El
+destí hi surt si la pantalla és prou ampla —a 144 px no hi caben tres
+columnes, i dues lletres i uns punts suspensius són pitjor que res: el
+destí sencer és a la pantalla de la línia. **Seleccionant-ne una** s'obre el detall
 d'aquella línia: **els dos propers autobusos**, una fila cadascun, amb el
 color de la línia, cap on va i a quina parada els esperes. Si el servei
 només en coneix un, ho diu.

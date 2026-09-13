@@ -2,7 +2,7 @@
 
 #define REFRESH_MS 30000
 #define TOAST_MS    1500
-#define HEADER_H      24
+#define HEADER_H      26
 
 // Every way of finding a stop lands here, so this is the one place that
 // knows how to add or drop a favourite: short press refreshes, long press
@@ -93,8 +93,8 @@ static void draw_header(GContext *ctx, const Layer *cell, uint16_t section,
 
   graphics_context_set_text_color(ctx, GColorWhite);
   graphics_draw_text(ctx, s_toast[0] ? s_toast : s_stop.name,
-                     fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
-                     GRect(4, -2, bounds.size.w - 22, bounds.size.h),
+                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                     GRect(4, -3, bounds.size.w - 22, bounds.size.h),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 
   // A filled dot marks a saved stop: no font is guaranteed to carry a star.
@@ -121,38 +121,52 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index,
 
   const Arrival *arrival = &g_arrivals[index->row];
 
+  // The line and the wait are what this row is for, so they take the type
+  // they can carry: a 44 px cell holds a 28 px badge and a Gothic 28.
   const int badge_w = 46;
-  const int badge_h = 24;
+  const int badge_h = 28;
+  const int right_w = 62;   // enough for three digits and the tick
+
   GRect badge = GRect(4, (bounds.size.h - badge_h) / 2, badge_w, badge_h);
   graphics_context_set_fill_color(ctx, ui_arrival_color(arrival));
   graphics_fill_rect(ctx, badge, 4, GCornersAll);
   graphics_context_set_text_color(ctx, GColorWhite);
   graphics_draw_text(ctx, arrival->line,
-                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                     GRect(badge.origin.x, badge.origin.y + 1, badge_w, badge_h),
+                     fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
+                     GRect(badge.origin.x, badge.origin.y, badge_w, badge_h),
                      GTextOverflowModeFill, GTextAlignmentCenter, NULL);
 
+  graphics_context_set_text_color(ctx, text_color);
+
+  // A bus pulling in says so in a word, and a word needs the room a number
+  // does not: it takes everything from the badge to the edge.
+  if (arrival->mins == 0) {
+    int x = badge_w + 10;
+    graphics_draw_text(ctx, i18n(T_ARRIVING),
+                       fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                       GRect(x, (bounds.size.h - 24) / 2, bounds.size.w - x - 4, 24),
+                       GTextOverflowModeFill, GTextAlignmentRight, NULL);
+    return;
+  }
+
   char minutes[16];
-  const char *minutes_font = FONT_KEY_GOTHIC_24_BOLD;
   if (arrival->mins < 0) {
     str_copy(minutes, "--", sizeof(minutes));
-  } else if (arrival->mins == 0) {
-    str_copy(minutes, i18n(T_ARRIVING), sizeof(minutes));
-    minutes_font = FONT_KEY_GOTHIC_14_BOLD;
   } else {
     snprintf(minutes, sizeof(minutes), "%d'", arrival->mins);
   }
 
-  const int right_w = 58;
-  graphics_context_set_text_color(ctx, text_color);
-  graphics_draw_text(ctx, minutes, fonts_get_system_font(minutes_font),
+  graphics_draw_text(ctx, minutes, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD),
                      GRect(bounds.size.w - right_w - 4,
-                           (bounds.size.h - 26) / 2, right_w, 26),
+                           (bounds.size.h - 30) / 2, right_w, 30),
                      GTextOverflowModeFill, GTextAlignmentRight, NULL);
 
+  // What is left in the middle is the destination's, but only if enough is
+  // left to read: two letters and an ellipsis are worse than nothing, and
+  // the line's own screen has it in full.
   int dest_x = badge_w + 10;
   int dest_w = bounds.size.w - dest_x - right_w - 6;
-  if (dest_w > 10 && arrival->dest[0] != '\0') {
+  if (dest_w >= 40 && arrival->dest[0] != '\0') {
     graphics_draw_text(ctx, arrival->dest,
                        fonts_get_system_font(FONT_KEY_GOTHIC_14),
                        GRect(dest_x, (bounds.size.h - 20) / 2, dest_w, 20),
