@@ -91,6 +91,54 @@ int main(void) {
   check("records with no line are dropped, the rest survive", got,
         "V31:5 X:-1");
 
+  printf("\nwhat a line says once\n");
+
+  // The phone writes a line's destination and colour on its first bus and
+  // leaves them off the rest.
+  char buffer[PAYLOAD_LEN];
+  str_copy(buffer, "V29|3|Diagonal Mar|E30613;V31|11|Forum|1B3D8F;"
+                   "V29|22|;V31|30|;", sizeof(buffer));
+  parse_arrivals(buffer);
+
+  checks++;
+  if (g_arrival_count == 4 &&
+      strcmp(g_arrivals[2].dest, "Diagonal Mar") == 0 &&
+      g_arrivals[2].color == 0xE30613 &&
+      strcmp(g_arrivals[3].dest, "Forum") == 0 &&
+      g_arrivals[3].color == 0x1B3D8F) {
+    printf("  ok   a second bus inherits its line's destination and colour\n");
+  } else {
+    failures++;
+    printf("  FAIL inheriting: %d arrivals, [2]=%s/%06x [3]=%s/%06x\n",
+           g_arrival_count, g_arrivals[2].dest, (unsigned)g_arrivals[2].color,
+           g_arrivals[3].dest, (unsigned)g_arrivals[3].color);
+  }
+
+  str_copy(buffer, "V29|3|Diagonal Mar|E30613;V29|22|Fabra i Puig|1B3D8F;",
+           sizeof(buffer));
+  parse_arrivals(buffer);
+
+  checks++;
+  if (strcmp(g_arrivals[1].dest, "Fabra i Puig") == 0 &&
+      g_arrivals[1].color == 0x1B3D8F) {
+    printf("  ok   but keeps its own when it is given one\n");
+  } else {
+    failures++;
+    printf("  FAIL its own: %s/%06x\n", g_arrivals[1].dest,
+           (unsigned)g_arrivals[1].color);
+  }
+
+  str_copy(buffer, "V29|3|Diagonal Mar;", sizeof(buffer));
+  parse_arrivals(buffer);
+
+  checks++;
+  if (g_arrivals[0].color == 0) {
+    printf("  ok   a line TMB has no colour for carries none\n");
+  } else {
+    failures++;
+    printf("  FAIL expected no colour, got %06x\n", (unsigned)g_arrivals[0].color);
+  }
+
   printf("\nnearby\n");
 
   char stops[PAYLOAD_LEN];

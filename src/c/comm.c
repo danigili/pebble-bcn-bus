@@ -61,12 +61,29 @@ static void parse_arrivals(char *payload) {
     char *line = str_split(&field, '|');
     char *mins = str_split(&field, '|');
     char *dest = str_split(&field, '|');
+    char *color = str_split(&field, '|');
     if (line == NULL || line[0] == '\0') continue;
 
     Arrival *arrival = &g_arrivals[g_arrival_count];
     str_copy(arrival->line, line, LINE_LEN);
     str_copy(arrival->dest, dest ? dest : "", DEST_LEN);
     arrival->mins = (mins && mins[0]) ? atoi(mins) : -1;
+    // Six hex digits, or nothing at all for a line TMB has no colour for.
+    arrival->color = (color && color[0])
+        ? (uint32_t)strtoul(color, NULL, 16) : 0;
+
+    // Where the destination or the colour were left out, they are the ones
+    // already given for this line: the phone only says them once.
+    if (arrival->dest[0] == '\0' || arrival->color == 0) {
+      for (int i = 0; i < g_arrival_count; i++) {
+        if (strcmp(g_arrivals[i].line, arrival->line) != 0) continue;
+        if (arrival->dest[0] == '\0') {
+          str_copy(arrival->dest, g_arrivals[i].dest, DEST_LEN);
+        }
+        if (arrival->color == 0) arrival->color = g_arrivals[i].color;
+        break;
+      }
+    }
     g_arrival_count++;
   }
 

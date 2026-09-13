@@ -47,9 +47,10 @@ typedef struct {
 } Stop;
 
 typedef struct {
-  char line[LINE_LEN];
-  char dest[DEST_LEN];
-  int  mins;              // -1 when the API gave us no usable estimate
+  char     line[LINE_LEN];
+  char     dest[DEST_LEN];
+  int      mins;          // -1 when the API gave us no usable estimate
+  uint32_t color;         // the line's own colour, 0 when TMB did not say
 } Arrival;
 
 typedef enum { DS_IDLE, DS_LOADING, DS_OK, DS_EMPTY, DS_ERROR } DataState;
@@ -129,5 +130,8 @@ void   ui_theme_menu(MenuLayer *menu);
 // Every window wears one, so the time is always on screen.
 StatusBarLayer *ui_status_bar_add(Window *window);
 GRect  ui_content_bounds(Window *window);
+// The line's own colour when TMB told us, and a guess from its name when
+// it did not.
+GColor ui_arrival_color(const Arrival *arrival);
 GColor ui_line_color(const char *line);
 GColor ui_accent(void);

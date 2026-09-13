@@ -58,6 +58,16 @@ static int collect(const Arrival **out, int max) {
 // Whatever the API calls the far end of this line. Only the first bus is
 // asked: two buses of the same line can be running different trips, and the
 // one you are waiting for is the first.
+// This line's colour, off any of its buses: they all carry it.
+static GColor line_color(void) {
+  for (int i = 0; i < g_arrival_count; i++) {
+    if (strcmp(g_arrivals[i].line, s_line) == 0) {
+      return ui_arrival_color(&g_arrivals[i]);
+    }
+  }
+  return ui_line_color(s_line);
+}
+
 static const char *destination(void) {
   for (int i = 0; i < g_arrival_count; i++) {
     if (strcmp(g_arrivals[i].line, s_line) == 0) return g_arrivals[i].dest;
@@ -81,7 +91,7 @@ static void draw_header(GContext *ctx, GRect bounds, int y) {
 
   // The band takes the line's own colour, so the badge from the list turns
   // into the whole strip and the line needs no second mention.
-  graphics_context_set_fill_color(ctx, ui_line_color(s_line));
+  graphics_context_set_fill_color(ctx, line_color());
   graphics_fill_rect(ctx, GRect(0, y, bounds.size.w, BAND_H), 0, GCornerNone);
 
   graphics_context_set_text_color(ctx, GColorWhite);

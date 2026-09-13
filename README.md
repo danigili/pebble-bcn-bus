@@ -65,6 +65,10 @@ Es parlen per AppMessage. Com que el diccionari d'AppMessage és petit, les
 respostes viatgen empaquetades en una sola cadena (`línia|minuts|destí;…`) en
 comptes d'una clau per camp.
 
+Cada línia diu el seu **destí i el seu color una sola vegada**, al seu primer
+bus; als altres es deixen en blanc i el rellotge els hereta. Repetir-ho a
+cada registre costava el segon bus d'unes quantes línies.
+
 Aquesta cadena té un límit i el rellotge en guarda un nombre fix d'arribades,
 així que el que queda fora importa. Si s'omplís per ordre d'arribada, en una
 parada amb una dotzena de línies hi cabrien el primer bus de cadascuna i la
@@ -98,6 +102,17 @@ llencen— i es guarda la llista. A partir d'aquí, buscar és calcular
 distàncies en local: instantani i sense tornar a sortir a la xarxa. La
 llista es refresca al cap d'un mes, i si la descàrrega falla es fa servir la
 que hi ha encara que sigui vella, que sempre és millor que no poder buscar.
+
+### Els colors de les línies
+
+Cada línia es dibuixa amb **el seu color oficial**, que ve de
+`/transit/linies/bus`: el mòbil se'l baixa un cop, se'l guarda un mes com fa
+amb les parades, i l'envia al rellotge amb les arribades.
+
+Abans es deduïa de la primera lletra —totes les V liles, tot el que no fos
+H/V/D/N/X vermell—, i això és senzillament fals: la V29 és vermella i la B24
+groga. La deducció es manté només per a les línies de què TMB no ens digui
+el color.
 
 ### El teclat
 

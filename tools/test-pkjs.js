@@ -144,10 +144,13 @@ check('an overdue bus is arriving, not negative',
         linies_trajectes: [{ nom_linia: 'H8',
           propers_busos: [{ temps_arribada: 480000 }] }] }] }, '1')[0].mins, 0);
 
+// Half a minute past five, so the milliseconds this test takes to run
+// cannot round it down to four.
 check('falls back to the phone clock when the response carries no timestamp',
       TMB.parseArrivals({ parades: [{ codi_parada: '1', linies_trajectes: [
         { nom_linia: 'H8', propers_busos: [
-          { temps_arribada: Date.now() + 5 * 60000 } ] } ] }] }, '1')[0].mins, 5);
+          { temps_arribada: Date.now() + 5.5 * 60000 } ] } ] }] }, '1')[0].mins,
+      5);
 
 check('a bus with no arrival time is dropped',
       TMB.parseArrivals({ timestamp: 0, parades: [{ codi_parada: '1',
@@ -253,6 +256,52 @@ console.log('\nencode / parse round trip');
 
 var stops = [{ code: '366', name: 'Casa' }, { code: '1122', name: 'Feina' }];
 check('stops encode', TMB.encodeStops(stops), '366|Casa;1122|Feina;');
+
+console.log('\nline colours');
+
+var palette = TMB.parseLineColors({ features: [
+  { properties: { NOM_LINIA: 'V29', COLOR_LINIA: '#E30613' } },
+  { properties: { NOM_LINIA: 'B24', COLOR_LINIA: 'ffd800' } },
+  { properties: { NOM_LINIA: 'H12', COLOR: '008ec1ff' } },
+  { properties: { NOM_LINIA: 'X1' } },
+  { properties: { COLOR_LINIA: 'D6001C' } }
+] });
+check('a colour per line, by the name on the bus', palette,
+      { V29: 'E30613', B24: 'FFD800', H12: '008EC1' });
+check('a hash makes no difference', TMB.normaliseHex('#E30613'), 'E30613');
+check('nor does the case', TMB.normaliseHex('e30613'), 'E30613');
+check('eight digits are a colour with transparency',
+      TMB.normaliseHex('008ec1ff'), '008EC1');
+check('anything else is no colour at all', TMB.normaliseHex('blau'), '');
+check('and so is nothing', TMB.normaliseHex(undefined), '');
+
+check('a colour travels as a fourth field',
+      TMB.encodeArrivals([{ line: 'V29', mins: 3, dest: 'Diagonal Mar',
+                            color: 'E30613' }]),
+      'V29|3|Diagonal Mar|E30613;');
+check('a line with no colour simply leaves it off',
+      TMB.encodeArrivals([{ line: 'V29', mins: 3, dest: 'Diagonal Mar' }]),
+      'V29|3|Diagonal Mar;');
+
+// The colours cost seven characters a record, so a busy stop has to still
+// fit every line's next two buses in the message.
+var busy = [];
+for (var b = 0; b < 15; b++) {
+  busy.push({ line: 'L' + b, mins: b + 1, dest: 'Pont del Treball Digne',
+              color: 'E30613' });
+  busy.push({ line: 'L' + b, mins: b + 10, dest: 'Pont del Treball Digne',
+              color: 'E30613' });
+}
+busy.sort(function (x, y) { return x.mins - y.mins; });
+
+var painted = TMB.encodeArrivals(busy).split(';').filter(Boolean).slice(0, 32);
+var seen = {};
+painted.forEach(function (r) {
+  var key = '#' + r.split('|')[0];
+  seen[key] = (seen[key] || 0) + 1;
+});
+check('colours do not cost a line its second bus',
+      Object.keys(seen).filter(function (k) { return seen[k] >= 2; }).length, 15);
 
 // Nearby stops carry a third field, whole metres, for the list to show.
 check('a distance travels with a nearby stop',

@@ -124,7 +124,7 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index,
   const int badge_w = 46;
   const int badge_h = 24;
   GRect badge = GRect(4, (bounds.size.h - badge_h) / 2, badge_w, badge_h);
-  graphics_context_set_fill_color(ctx, ui_line_color(arrival->line));
+  graphics_context_set_fill_color(ctx, ui_arrival_color(arrival));
   graphics_fill_rect(ctx, badge, 4, GCornersAll);
   graphics_context_set_text_color(ctx, GColorWhite);
   graphics_draw_text(ctx, arrival->line,

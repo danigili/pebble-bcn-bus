@@ -16,6 +16,7 @@ var CONFIG = require('./config');
 var SETTINGS_KEY = 'bcnbus:settings';
 var FAVS_KEY = 'bcnbus:favs';
 var STOPS_KEY = 'bcnbus:stops';
+var LINES_KEY = 'bcnbus:lines';
 
 // Stops do not move. The list is fetched once and kept, and only looked at
 // again when it is older than this.
@@ -83,6 +84,58 @@ function saveFavs(favs) {
   } catch (e) {
     console.log('could not persist favourites: ' + e);
   }
+}
+
+// The line colours, by line name. Fetched once and kept, like the stops:
+// a line does not change colour.
+function loadLineColors() {
+  try {
+    return JSON.parse(localStorage.getItem(LINES_KEY)) || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveLineColors(colors) {
+  try {
+    localStorage.setItem(LINES_KEY, JSON.stringify({
+      at: Date.now(),
+      colors: colors
+    }));
+  } catch (e) {
+    console.log('could not keep the line colours: ' + e);
+  }
+}
+
+// Fetched in the background, never in the way: times go to the watch with
+// whatever colours are known, and the next refresh has the rest.
+function refreshLineColors() {
+  var cached = loadLineColors();
+  if (cached && (Date.now() - (cached.at || 0)) < STOPS_MAX_AGE) return;
+
+  httpGet(TMB.buildLinesUrl(), function (json) {
+    var colors = TMB.parseLineColors(json);
+    var found = 0;
+    for (var name in colors) { if (colors[name]) found++; }
+    console.log('lines: ' + found + ' with a colour');
+
+    if (found > 0) saveLineColors(colors);
+    else console.log('lines: no colour in ' +
+                     JSON.stringify(json).substring(0, 300));
+  }, function (status, message, body) {
+    console.log('lines: HTTP ' + status + ' ' +
+                String(body || '').substring(0, 200));
+  }, STOPS_TIMEOUT);
+}
+
+function paint(arrivals) {
+  var cached = loadLineColors();
+  var colors = (cached && cached.colors) || {};
+
+  for (var i = 0; i < arrivals.length; i++) {
+    arrivals[i].color = colors[arrivals[i].line.toUpperCase()] || '';
+  }
+  return arrivals;
 }
 
 function loadStopIndex() {
@@ -220,7 +273,7 @@ function handleTimes(code) {
                TMB.pickStopName(json, code) ||
                (text('stop') + ' ' + code);
 
-    var arrivals = TMB.parseArrivals(json, code);
+    var arrivals = paint(TMB.parseArrivals(json, code));
 
     // A good answer we could make nothing of is worth seeing: this puts the
     // shape in `pebble logs` instead of leaving it to be guessed at.
@@ -320,6 +373,7 @@ function handleNearby() {
 
 Pebble.addEventListener('ready', function () {
   send({ MSG_TYPE: MSG_READY });
+  refreshLineColors();
 });
 
 Pebble.addEventListener('appmessage', function (event) {

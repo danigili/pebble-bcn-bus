@@ -1,6 +1,13 @@
 #include "app.h"
 
-// TMB paints its network by line family: the H (horizontal), V (vertical)
+GColor ui_arrival_color(const Arrival *arrival) {
+#ifdef PBL_COLOR
+  if (arrival->color != 0) return GColorFromHEX(arrival->color);
+#endif
+  return ui_line_color(arrival->line);
+}
+
+// Where TMB has not told us the colour, it is guessed from the line family: the H (horizontal), V (vertical)
 // and D (diagonal) lines of the Nova Xarxa each have their own colour, night
 // buses are dark blue and the conventional numbered lines are the classic
 // TMB red. Close enough that a glance at the badge tells you the family.

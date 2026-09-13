@@ -81,6 +81,14 @@ function buildStopsUrl() {
   return BASE + '/transit/parades?' + auth();
 }
 
+// Every bus line TMB runs, which is where the line colours live. Guessing
+// them from the line's first letter gets the families wrong —V29 is red and
+// B24 yellow, not one purple for every V— so they come from here instead,
+// and like the stops they are fetched once and kept.
+function buildLinesUrl() {
+  return BASE + '/transit/linies/bus?' + auth();
+}
+
 function listOf(value) {
   if (!value) return [];
   return Array.isArray(value) ? value : [value];
@@ -243,6 +251,36 @@ function haversine(lat1, lon1, lat2, lon2) {
   return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// "D6001C", however the field spells it: with a hash, in lower case, or as
+// the eight digits some feeds use for a colour with transparency.
+function normaliseHex(value) {
+  var hex = String(value === undefined || value === null ? '' : value)
+      .replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+
+  if (hex.length === 8) hex = hex.substring(0, 6);   // RRGGBBAA
+  return (hex.length === 6) ? hex : '';
+}
+
+var LINE_NAME_KEYS  = ['NOM_LINIA', 'nom_linia', 'NOM', 'CODI_LINIA'];
+var LINE_COLOR_KEYS = ['COLOR_LINIA', 'COLOR', 'color_linia', 'color',
+                       'route_color', 'COLOR_LINIA_HEX'];
+
+// The colour of each line, by the name written on the bus: { "V29": "..." }.
+// Which property carries it is not documented, so the plausible ones are
+// tried; a line whose colour is not found simply keeps the old guess.
+function parseLineColors(json) {
+  var features = listOf(json && json.features);
+  var out = {};
+
+  for (var i = 0; i < features.length; i++) {
+    var props = (features[i] && features[i].properties) || {};
+    var name = sanitize(firstString(props, LINE_NAME_KEYS)).toUpperCase();
+    var color = normaliseHex(firstString(props, LINE_COLOR_KEYS));
+    if (name && color) out[name] = color;
+  }
+  return out;
+}
+
 // The stops, kept down to what a search needs: a code, something to call
 // it, and where it is. A couple of thousand of these live in the phone's
 // storage, so every field that is not one of those three is dropped.
@@ -326,13 +364,27 @@ function encodeArrivals(arrivals) {
     return (a.rank !== b.rank) ? a.rank - b.rank : a.order - b.order;
   });
 
+  // A line's destination and colour are the line's, not the bus's, so they
+  // are written once and left empty on the rest: the watch fills those in
+  // from the first bus of the same line. "V29|22||" instead of repeating
+  // "Diagonal Mar|E30613" buys back the room the colours cost.
   var parts = [];
   var length = 0;
+  var said = {};
 
   for (var j = 0; j < ranked.length; j++) {
     var a = ranked[j].arrival;
-    var record = a.line + '|' + a.mins + '|' + a.dest + ';';
+    var key = '#' + a.line;
+    var known = said[key];
+
+    var dest = (known && known.dest === a.dest) ? '' : a.dest;
+    var color = (known && known.color === a.color) ? '' : (a.color || '');
+    var record = a.line + '|' + a.mins + '|' + dest +
+                 (color ? '|' + color : '') + ';';
+
     if (length + record.length > MAX_PAYLOAD) break;
+
+    said[key] = { dest: a.dest, color: a.color };
     parts.push(record);
     length += record.length;
   }
@@ -378,6 +430,9 @@ var TMB = {
   sanitize: sanitize,
   buildTimesUrl: buildTimesUrl,
   buildStopsUrl: buildStopsUrl,
+  buildLinesUrl: buildLinesUrl,
+  parseLineColors: parseLineColors,
+  normaliseHex: normaliseHex,
   parseArrivals: parseArrivals,
   parseStopIndex: parseStopIndex,
   nearestStops: nearestStops,
