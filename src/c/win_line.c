@@ -161,13 +161,15 @@ static void layer_update(Layer *layer, GContext *ctx) {
   }
 
   // Both times on one line -- "8 min \u00b7 23 min" -- so whether the one
-  // after next shows up never depends on a second row drawing.
+  // after next shows up never depends on a second row drawing. The middle
+  // dot is written as its UTF-8 bytes, and the joining is snprintf's, which
+  // the rest of the app already leans on.
   char shown[48];
-  str_copy(shown, minutes_of(next[0]), sizeof(shown));
-
   if (count > 1) {
-    strncat(shown, " \u00b7 ", sizeof(shown) - strlen(shown) - 1);
-    strncat(shown, minutes_of(next[1]), sizeof(shown) - strlen(shown) - 1);
+    snprintf(shown, sizeof(shown), "%s \xc2\xb7 %s",
+             minutes_of(next[0]), minutes_of(next[1]));
+  } else {
+    str_copy(shown, minutes_of(next[0]), sizeof(shown));
   }
 
   // "8 min \u00b7 23 min" is about 150 px of Gothic 24 and a Basalt is 144

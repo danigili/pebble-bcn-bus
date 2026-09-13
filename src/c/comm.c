@@ -35,9 +35,26 @@ static void copy_payload(Tuple *tuple) {
 static uint32_t parse_color(const char *text) {
   if (text == NULL || text[0] == '\0') return 0;
 
-  uint32_t value = (uint32_t)strtoul(text, NULL, 16);
-  if (strlen(text) > 2) return value;
+  // Read by hand rather than with strtoul: the watch's C library is a small
+  // subset, and everything else here sticks to what the rest of the app
+  // already uses.
+  uint32_t value = 0;
+  int digits = 0;
+  for (; text[digits] != '\0'; digits++) {
+    char c = text[digits];
+    uint32_t digit;
+    if (c >= '0' && c <= '9')      digit = (uint32_t)(c - '0');
+    else if (c >= 'a' && c <= 'f') digit = (uint32_t)(c - 'a' + 10);
+    else if (c >= 'A' && c <= 'F') digit = (uint32_t)(c - 'A' + 10);
+    else break;
+    value = value * 16 + digit;
+  }
 
+  if (digits == 0) return 0;
+  if (digits > 2) return value;   // six digits: a colour as it comes
+
+  // Two digits: the watch's own colour byte, two bits a channel. Spread it
+  // back into the hex triplet GColorFromHEX wants.
   uint32_t hex = 0;
   for (int i = 0; i < 3; i++) {
     uint32_t channel = (value >> (4 - i * 2)) & 0x3;
