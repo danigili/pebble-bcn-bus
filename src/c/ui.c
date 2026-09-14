@@ -7,11 +7,7 @@ GColor ui_arrival_color(const Arrival *arrival) {
   return ui_line_color(arrival->line);
 }
 
-// A stopgap for the lines TMB has not given us a colour for, which in
-// practice means the first seconds after an install, before the phone has
-// the line list. It goes by family, and being a guess it is only ever
-// roughly right: V lines are green and the AMB's are yellow because that is
-// what they turned out to be, the rest is the Nova Xarxa read off a map.
+// For lines the phone has sent no colour for.
 GColor ui_line_color(const char *line) {
 #ifdef PBL_COLOR
   uint32_t hex;
@@ -31,9 +27,8 @@ GColor ui_line_color(const char *line) {
 #endif
 }
 
-// A five-pointed star, drawn rather than written: no font on the watch is
-// guaranteed to carry one. Ten points around a hundred-unit circle, an outer
-// tip and an inner corner in turn, scaled to whatever size is asked for.
+// Ten points around a hundred-unit circle: an outer tip and an inner corner
+// in turn, scaled to the radius asked for.
 static const GPoint STAR[] = {
   {    0, -100 },
   {   22,  -31 },
@@ -49,10 +44,7 @@ static const GPoint STAR[] = {
 
 #define STAR_POINTS (sizeof(STAR) / sizeof(STAR[0]))
 
-// The path is made once and kept: this is drawn on every redraw of a stop's
-// header, and taking a little memory and giving it back each time is not
-// what a draw callback should be doing. The points sit around the origin
-// and gpath_move_to puts them where they go.
+// The points sit around the origin; gpath_move_to places them.
 void ui_draw_star(GContext *ctx, GPoint centre, int radius) {
   static GPoint    s_points[STAR_POINTS];
   static GPathInfo s_info = { STAR_POINTS, s_points };
@@ -88,8 +80,7 @@ void ui_theme_menu(MenuLayer *menu) {
   menu_layer_set_highlight_colors(menu, ui_accent(), GColorWhite);
 }
 
-// The time, on every screen. Pebble's own status bar draws it, so it is the
-// watch's clock in the watch's format and nothing here has to keep it.
+// The system status bar, which draws the time in the watch's own format.
 StatusBarLayer *ui_status_bar_add(Window *window) {
   StatusBarLayer *bar = status_bar_layer_create();
   status_bar_layer_set_colors(bar, GColorWhite, GColorBlack);
@@ -98,8 +89,8 @@ StatusBarLayer *ui_status_bar_add(Window *window) {
   return bar;
 }
 
-// What is left of the window once the status bar has had its strip. Layers
-// built from this keep drawing in their own coordinates, starting at zero.
+// The window below the status bar. A layer built from this draws in its own
+// coordinates, starting at zero.
 GRect ui_content_bounds(Window *window) {
   GRect bounds = layer_get_bounds(window_get_root_layer(window));
   bounds.origin.y += STATUS_BAR_LAYER_HEIGHT;

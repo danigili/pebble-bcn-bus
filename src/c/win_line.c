@@ -6,13 +6,8 @@
 #define STOP_H      18      // which stop all this is about
 #define HEADER_H    (BAND_H + STOP_H)
 
-// The detail of one line at one stop, reached by picking it out of the
-// stop's list: when the next bus of that line comes, and when the one after
-// it does. Two numbers, as big as they go.
-//
-// The arrivals come from the same globals the list draws from — the phone
-// sends every bus it knows about, one entry each — so this window filters
-// them by line rather than asking for anything new.
+// One line at one stop: its next two buses, filtered out of the arrivals the
+// stop screen is drawing from.
 
 static Window     *s_window;
 static StatusBarLayer *s_status;
@@ -45,8 +40,7 @@ static void request_times(void) {
 
 // ---------------------------------------------------------------- data
 
-// The soonest buses of this line, in order. The phone has already sorted
-// every arrival by waiting time, so taking them as they come keeps that.
+// This line's buses, soonest first: g_arrivals is already in time order.
 static int collect(const Arrival **out, int max) {
   int found = 0;
   for (int i = 0; i < g_arrival_count && found < max; i++) {
@@ -55,10 +49,8 @@ static int collect(const Arrival **out, int max) {
   return found;
 }
 
-// Whatever the API calls the far end of this line. Only the first bus is
-// asked: two buses of the same line can be running different trips, and the
-// one you are waiting for is the first.
-// This line's colour, off any of its buses: they all carry it.
+// Where the first bus of this line is headed.
+// This line's colour, from any of its buses.
 static GColor line_color(void) {
   for (int i = 0; i < g_arrival_count; i++) {
     if (strcmp(g_arrivals[i].line, s_line) == 0) {
@@ -89,8 +81,6 @@ static void draw_header(GContext *ctx, GRect bounds, int y) {
   int inset = PBL_IF_ROUND_ELSE(28, 5);
   int text_w = bounds.size.w - inset * 2;
 
-  // The band takes the line's own colour, so the badge from the list turns
-  // into the whole strip and the line needs no second mention.
   graphics_context_set_fill_color(ctx, line_color());
   graphics_fill_rect(ctx, GRect(0, y, bounds.size.w, BAND_H), 0, GCornerNone);
 
@@ -107,7 +97,6 @@ static void draw_header(GContext *ctx, GRect bounds, int y) {
                        NULL);
   }
 
-  // Which stop these times are for, since the same line stops at plenty.
   graphics_context_set_text_color(ctx, GColorBlack);
   graphics_draw_text(ctx, s_stop.name, fonts_get_system_font(FONT_KEY_GOTHIC_14),
                      GRect(inset, y + BAND_H - 2, text_w - 46, STOP_H),
@@ -117,13 +106,9 @@ static void draw_header(GContext *ctx, GRect bounds, int y) {
                      GTextOverflowModeFill, GTextAlignmentRight, NULL);
 }
 
-// How long to wait, drawn as large as the screen allows: the number is what
-// someone at a stop is reading, so it gets the big type and the unit sits
-// beside it in small. Numbers are right-aligned to a column and units left-
-// aligned after it, which lines the two buses up under each other.
-//
-// A bus that is pulling in has a word instead of a number, and a word that
-// long only fits across the whole row.
+// The number in large type, the unit small beside it, numbers aligned to a
+// column so the two buses read under each other. A bus pulling in has a word
+// instead, which takes the whole row.
 static void draw_wait(GContext *ctx, GRect row, const Arrival *arrival) {
   bool wide = row.size.w >= 180;
   int mid = row.origin.y + row.size.h / 2;
@@ -186,9 +171,6 @@ static void layer_update(Layer *layer, GContext *ctx) {
     return;
   }
 
-  // Two rows, one bus each, because at 144 px wide there is no way to put
-  // both times on one line and still have them readable -- which is what
-  // they are for.
   int row_h = body_h / SHOWN_BUSES;
 
   for (int i = 0; i < SHOWN_BUSES; i++) {
@@ -203,7 +185,6 @@ static void layer_update(Layer *layer, GContext *ctx) {
     if (i < count) {
       draw_wait(ctx, row, next[i]);
     } else {
-      // Nothing behind it: say so, rather than leaving half a screen blank.
       graphics_context_set_text_color(ctx, GColorBlack);
       graphics_draw_text(ctx, i18n(T_NO_MORE),
                          fonts_get_system_font(FONT_KEY_GOTHIC_14),
@@ -242,15 +223,11 @@ static void window_load(Window *window) {
   s_layer = layer_create(ui_content_bounds(window));
   layer_set_update_proc(s_layer, layer_update);
   layer_add_child(root, s_layer);
-
-  // Added last, so it stays over whatever the window draws.
   s_status = ui_status_bar_add(window);
 
   window_set_click_config_provider(window, click_config);
 
   s_prev_handler = comm_set_handler(on_message);
-  // The list underneath has just been showing these very times, so they go
-  // up straight away and the refresh happens underneath them.
   request_times();
 }
 

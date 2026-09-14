@@ -28,16 +28,12 @@ static void copy_payload(Tuple *tuple) {
   if (tuple != NULL) str_copy(s_payload, tuple->value->cstring, PAYLOAD_LEN);
 }
 
-// A colour arrives as the two hex digits of the watch's own colour byte:
-// two bits a channel, which is all the screen has. Spread back out to the
-// hex triplet GColorFromHEX wants. Six digits are taken as they come, and
-// nothing at all means TMB had no colour for that line.
+// Two hex digits are the watch's colour byte, two bits a channel; six are a
+// hex triplet. Either way the result is what GColorFromHEX wants, and 0
+// means no colour was sent.
 static uint32_t parse_color(const char *text) {
   if (text == NULL || text[0] == '\0') return 0;
 
-  // Read by hand rather than with strtoul: the watch's C library is a small
-  // subset, and everything else here sticks to what the rest of the app
-  // already uses.
   uint32_t value = 0;
   int digits = 0;
   for (; text[digits] != '\0'; digits++) {
@@ -51,10 +47,8 @@ static uint32_t parse_color(const char *text) {
   }
 
   if (digits == 0) return 0;
-  if (digits > 2) return value;   // six digits: a colour as it comes
+  if (digits > 2) return value;
 
-  // Two digits: the watch's own colour byte, two bits a channel. Spread it
-  // back into the hex triplet GColorFromHEX wants.
   uint32_t hex = 0;
   for (int i = 0; i < 3; i++) {
     uint32_t channel = (value >> (4 - i * 2)) & 0x3;
@@ -68,9 +62,7 @@ static int wait_of(const Arrival *arrival) {
   return (arrival->mins < 0) ? 100000 : arrival->mins;
 }
 
-// The phone chooses what fits in the message by line —every line's next bus
-// before anyone's second— so what arrives is not in time order. Put it back:
-// the list reads as a stop's departure board.
+// The phone fills the message by line, not by time, so sort on arrival.
 static void sort_arrivals(void) {
   for (int i = 1; i < g_arrival_count; i++) {
     Arrival pending = g_arrivals[i];
@@ -105,8 +97,7 @@ static void parse_arrivals(char *payload) {
     arrival->mins = (mins && mins[0]) ? atoi(mins) : -1;
     arrival->color = parse_color(color);
 
-    // Where the destination or the colour were left out, they are the ones
-    // already given for this line: the phone only says them once.
+    // Left out means the same as this line's first bus.
     if (arrival->dest[0] == '\0' || arrival->color == 0) {
       for (int i = 0; i < g_arrival_count; i++) {
         if (strcmp(g_arrivals[i].line, arrival->line) != 0) continue;

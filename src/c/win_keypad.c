@@ -20,15 +20,14 @@ static void submit_cb(void *data) {
   memset(&stop, 0, sizeof(stop));
   str_copy(stop.code, s_code, CODE_LEN);
 
-  // Push the stop first, then drop the keypad out of the stack, so Back
-  // from the times screen goes straight home instead of back to the keypad.
+  // Pushed first, then removed, so Back skips the keypad.
   Window *keypad = s_window;
   win_stop_push(&stop);
   if (keypad != NULL) window_stack_remove(keypad, false);
 }
 
-// Deferred by a timer because this can run from inside a click handler, and
-// tearing down the window in place would pull the rug from under the caller.
+// Deferred: this runs from a click handler, which cannot tear down its own
+// window.
 static void submit(void) {
   if (s_len == 0 || s_submit_timer != NULL) return;
   s_submit_timer = app_timer_register(10, submit_cb, NULL);
@@ -50,10 +49,7 @@ static void mark_dirty(void) {
 
 // ------------------------------------------------------------- drawing
 
-// Typing a code is obvious; accepting it is not, since there is no OK key to
-// press. So the hold comes first, big and in the accent colour, and the two
-// everyday keys sit under it in small type. Both boxes have room for a
-// second line, because the same sentence is longer in Spanish than English.
+// Two lines of room for each: the same sentence is longer in Spanish.
 static void draw_button_hint(GContext *ctx, GRect bounds) {
   int inset = PBL_IF_ROUND_ELSE(22, 6);
   int y = DISPLAY_H + 8;
@@ -138,8 +134,7 @@ static void back_click(ClickRecognizerRef ref, void *context) {
 }
 
 static void click_config(void *context) {
-  // Repeating, so holding Up spins the digit instead of asking for nine
-  // separate presses to get from 0 to 9.
+  // Repeating, so holding spins the digit.
   window_single_repeating_click_subscribe(BUTTON_ID_UP, 120, up_click);
   window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 120, down_click);
   window_single_click_subscribe(BUTTON_ID_SELECT, next_digit_click);
@@ -154,12 +149,9 @@ static void window_load(Window *window) {
   s_layer = layer_create(ui_content_bounds(window));
   layer_set_update_proc(s_layer, layer_update);
   layer_add_child(root, s_layer);
-
-  // Added last, so it stays over whatever the window draws.
   s_status = ui_status_bar_add(window);
 
-  // Start on a digit so Up and Down have something to turn right away.
-  if (s_len == 0) append_digit('0');
+  if (s_len == 0) append_digit('0');   // something for Up and Down to turn
   window_set_click_config_provider(window, click_config);
 }
 

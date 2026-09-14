@@ -4,9 +4,8 @@
 #define TOAST_MS    1500
 #define HEADER_H      26
 
-// Every way of finding a stop lands here, so this is the one place that
-// knows how to add or drop a favourite: short press refreshes, long press
-// toggles.
+// The lines calling at one stop. Select opens a line, hold keeps or drops
+// the stop.
 
 static Window     *s_window;
 static StatusBarLayer *s_status;
@@ -43,8 +42,6 @@ static void refresh_timer_cb(void *data) {
 }
 
 static void request_times(void) {
-  // Keep showing the previous times while refreshing, so the list does not
-  // blink back to "loading" every half minute.
   if (g_arrival_count == 0) s_state = DS_LOADING;
 
   comm_req_times(s_stop.code);
@@ -121,8 +118,6 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index,
 
   const Arrival *arrival = &g_arrivals[index->row];
 
-  // The line and the wait are what this row is for, so they take the type
-  // they can carry: a 44 px cell holds a 28 px badge and a Gothic 28.
   const int badge_w = 46;
   const int badge_h = 28;
   const int right_w = 62;   // enough for three digits and the tick
@@ -138,8 +133,7 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index,
 
   graphics_context_set_text_color(ctx, text_color);
 
-  // A bus pulling in says so in a word, and a word needs the room a number
-  // does not: it takes everything from the badge to the edge.
+  // A word, not a number: it takes the width a number does not need.
   if (arrival->mins == 0) {
     int x = badge_w + 10;
     graphics_draw_text(ctx, i18n(T_ARRIVING),
@@ -161,9 +155,7 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index,
                            (bounds.size.h - 30) / 2, right_w, 30),
                      GTextOverflowModeFill, GTextAlignmentRight, NULL);
 
-  // What is left in the middle is the destination's, but only if enough is
-  // left to read: two letters and an ellipsis are worse than nothing, and
-  // the line's own screen has it in full.
+  // Whatever is left in the middle, if enough of it is left to read.
   int dest_x = badge_w + 10;
   int dest_w = bounds.size.w - dest_x - right_w - 6;
   if (dest_w >= 40 && arrival->dest[0] != '\0') {
@@ -174,8 +166,7 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index,
   }
 }
 
-// Picking a bus opens that line's detail. With nothing to pick — loading,
-// an error, no buses — the press means what it always did: try again.
+// With nothing to pick — loading, an error, no buses — refresh instead.
 static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
   if (showing_status() || index->row >= g_arrival_count) {
     request_times();
@@ -200,8 +191,7 @@ static void on_message(int msg_type) {
   switch (msg_type) {
     case MSG_TIMES:
       s_state = (g_arrival_count > 0) ? DS_OK : DS_EMPTY;
-      // Adopt the name the API knows, but never clobber one the user gave
-      // this stop in the settings page.
+      // Never over a name the user gave this stop.
       if (g_title[0] != '\0' &&
           (s_stop.name[0] == '\0' || strcmp(s_stop.name, s_stop.code) == 0)) {
         str_copy(s_stop.name, g_title, NAME_LEN);
@@ -234,8 +224,6 @@ static void window_load(Window *window) {
   menu_layer_set_center_focused(s_menu, true);
 #endif
   layer_add_child(root, menu_layer_get_layer(s_menu));
-
-  // Added last, so it stays over whatever the window draws.
   s_status = ui_status_bar_add(window);
 
   s_prev_handler = comm_set_handler(on_message);

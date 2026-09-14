@@ -2,12 +2,11 @@
  * Phone side of BCN Bus.
  *
  * The watch has no network, so every request it makes arrives here as an
- * AppMessage, gets turned into an HTTPS call to the TMB API, and comes back
- * as a packed string.
+ * AppMessage, becomes an HTTPS call to the TMB API, and goes back as a
+ * packed string.
  *
- * Favourites are owned by the watch: it pushes its list here so the settings
- * page can show and edit them, and an edit pushes the whole list back down.
- * That way saving a stop still works with the phone out of range.
+ * The watch owns the kept stops: it pushes its list here for the settings
+ * page, and an edit pushes the whole list back down.
  */
 
 var TMB = require('./tmb');
@@ -18,8 +17,7 @@ var FAVS_KEY = 'bcnbus:favs';
 var STOPS_KEY = 'bcnbus:stops';
 var LINES_KEY = 'bcnbus:lines';
 
-// Stops do not move. The list is fetched once and kept, and only looked at
-// again when it is older than this.
+// How old the stop and line lists may get before they are fetched again.
 var STOPS_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
 var STOPS_TIMEOUT = 45000;   // it is every stop TMB runs, so allow for it
 
@@ -86,8 +84,7 @@ function saveFavs(favs) {
   }
 }
 
-// The line colours, by line name. Fetched once and kept, like the stops:
-// a line does not change colour.
+// The line colours, by line name, fetched once and kept.
 function loadLineColors() {
   try {
     return JSON.parse(localStorage.getItem(LINES_KEY)) || null;
@@ -107,8 +104,7 @@ function saveLineColors(colors) {
   }
 }
 
-// Fetched in the background, never in the way: times go to the watch with
-// whatever colours are known, and the next refresh has the rest.
+// In the background: times go out with whatever colours are known.
 function refreshLineColors() {
   var cached = loadLineColors();
   if (cached && (Date.now() - (cached.at || 0)) < STOPS_MAX_AGE) return;
@@ -131,12 +127,9 @@ function refreshLineColors() {
 var NIGHT_COLOR = TMB.shortColor('1B3D8F');   // the Nitbus dark blue
 var AMB_COLOR   = TMB.shortColor('FFD800');   // the AMB's yellow
 
-// What colour a line gets when TMB's list does not have it, which means
-// every line one of the other AMB operators runs.
-//
-// Night buses come first: the Nitbus is run by the AMB too, so going by the
-// operator alone painted the whole night network yellow. A line called N8
-// says what it is in its name, and that beats knowing who drives it.
+// For lines TMB's list does not carry, which is every line the other AMB
+// operators run. Night buses first: the Nitbus is the AMB's too, and an N in
+// the name beats knowing who drives it.
 function fallbackColor(arrival) {
   if (arrival.line.charAt(0).toUpperCase() === 'N') return NIGHT_COLOR;
   if (arrival.amb) return AMB_COLOR;
@@ -169,8 +162,8 @@ function saveStopIndex(index) {
       list: index
     }));
   } catch (e) {
-    // Out of room: the search still works this time, it just pays for the
-    // download again next time.
+    // Out of room: the search still works, it just downloads again next
+    // time.
     console.log('could not keep the stop list: ' + e);
   }
 }
@@ -234,8 +227,7 @@ function favouriteName(code) {
   return '';
 }
 
-// For the log: how many distinct lines those arrivals cover, which is what
-// tells a short answer from a stop that simply has one bus per line.
+// For the log: how many distinct lines those arrivals cover.
 function countLines(arrivals) {
   var lines = {};
   var count = 0;
@@ -246,8 +238,7 @@ function countLines(arrivals) {
   return count;
 }
 
-// A line's detail screen shows its next two buses, so how many buses each
-// line actually has is the whole question. This prints it: "V31x1 V33x2".
+// For the log: how many buses each line has, as "V31x1 V33x2".
 function census(arrivals) {
   var counts = {};
   var order = [];
@@ -272,8 +263,7 @@ function anyLineHasTwo(arrivals) {
   return false;
 }
 
-// Which of the two response shapes we read it out of, since that decides
-// whether a line can have more than one bus at all.
+// For the log: which of the response shapes it was read out of.
 function shapeOf(json) {
   if (json && json.parades) return 'parades';
   if (json && json.data && json.data.parades) return 'data.parades';
@@ -283,16 +273,15 @@ function shapeOf(json) {
 
 function handleTimes(code) {
   httpGet(TMB.buildTimesUrl(code), function (json) {
-    // Prefer the name the user gave the stop, then whatever the API knows,
-    // and only then fall back to something built from the code.
+    // The name the user gave it, then the API's, then one built from the
+    // code.
     var name = favouriteName(code) ||
                TMB.pickStopName(json, code) ||
                (text('stop') + ' ' + code);
 
     var arrivals = paint(TMB.parseArrivals(json, code));
 
-    // A good answer we could make nothing of is worth seeing: this puts the
-    // shape in `pebble logs` instead of leaving it to be guessed at.
+    // An answer we could make nothing of goes to `pebble logs` whole.
     if (arrivals.length === 0) {
       console.log('no arrivals parsed from: ' +
                   JSON.stringify(json).substring(0, 300));
@@ -317,8 +306,7 @@ function handleTimes(code) {
 }
 
 // The stop list, from storage when it is there and from TMB when it is not.
-// A list too old to trust is still better than no search at all, so a failed
-// refresh falls back to it rather than to an error.
+// A failed refresh falls back to the old list rather than to an error.
 function withStopIndex(onReady, onFail) {
   var cached = loadStopIndex();
   var usable = cached && cached.list && cached.list.length;
@@ -360,9 +348,8 @@ function handleNearby() {
     var lon = position.coords.longitude;
     var radius = settings.radius || 500;
 
-    // Rounded to about a hundred metres: enough to see at a glance whether
-    // the fix is in Barcelona at all, which is half of what goes wrong here,
-    // without writing someone's doorstep into a log.
+    // Rounded to about a hundred metres: enough to tell whether the fix is
+    // in Barcelona at all, without writing a doorstep into a log.
     console.log('nearby: fix near ' + lat.toFixed(3) + ',' + lon.toFixed(3) +
                 ' radius ' + radius + 'm');
 

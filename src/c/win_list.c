@@ -1,11 +1,9 @@
 #include "app.h"
 
-// One window serves both the favourites and the nearby list: they differ
-// only in where the stops come from and whether they need loading.
+// Both the kept stops and the nearby ones: they differ only in where the
+// stops come from and whether they have to be fetched.
 
-// Four candidate queries at fifteen seconds each is the worst the phone can
-// take before it gives up, so wait past that and then stop waiting.
-#define ANSWER_MS 70000
+#define ANSWER_MS 70000   // past the worst the phone side can take
 
 static Window     *s_window;
 static StatusBarLayer *s_status;
@@ -63,8 +61,7 @@ static void draw_header(GContext *ctx, const Layer *cell, uint16_t section,
                               i18n(s_nearby_mode ? T_NEARBY : T_FAVOURITES));
 }
 
-// How far away, bottom right, where the standard cell leaves room: the name
-// runs along the top and the code sits bottom left.
+// Bottom right, the corner the standard cell leaves free.
 static void draw_distance(GContext *ctx, const Layer *cell, MenuIndex *index) {
   if (index->row >= MAX_NEARBY) return;
 
@@ -104,8 +101,7 @@ static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
   if (stop != NULL) win_stop_push(stop);
 }
 
-// Nothing came back at all: no phone in range, or its side never got as far
-// as answering. Either way, saying so beats spinning for ever.
+// Nothing came back: no phone in range, or its side never answered.
 static void answer_timed_out(void *data) {
   s_answer_timer = NULL;
   if (!s_nearby_mode || s_state != DS_LOADING) return;
@@ -150,15 +146,12 @@ static void window_load(Window *window) {
   menu_layer_set_center_focused(s_menu, true);
 #endif
   layer_add_child(root, menu_layer_get_layer(s_menu));
-
-  // Added last, so it stays over whatever the window draws.
   s_status = ui_status_bar_add(window);
 
   s_prev_handler = comm_set_handler(on_message);
 }
 
-// Favourites can be added or removed from the stop window on top of us, so
-// refresh the list every time we come back to the front.
+// The stop window above can have kept or dropped one.
 static void window_appear(Window *window) {
   if (!s_nearby_mode && s_menu != NULL) menu_layer_reload_data(s_menu);
 }

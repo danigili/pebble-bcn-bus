@@ -1,39 +1,22 @@
 /*
  * Talking to the TMB API, and packing the answers into the compact strings
- * the watch parses.
+ * the watch parses. Every function here is pure, so tools/test-pkjs.js can
+ * exercise them without a phone or a watch.
  *
- * Everything here is a pure function so it can be exercised from Node
- * without a phone or a watch; see tools/test-pkjs.js.
- *
- * The iBus response looks like this:
+ * Two arrival shapes are read. /itransit/bus/parades nests the buses inside
+ * each line of each stop:
  *
  *   { timestamp, parades: [ { codi_parada, nom_parada, linies_trajectes: [
  *       { nom_linia, desti_trajecte, propers_busos: [ { temps_arribada } ] }
  *     ] } ] }
  *
- * Arrival times are absolute epoch milliseconds, so a waiting time is a
- * subtraction. It is measured against the response's own timestamp and not
- * the phone's clock: the two need not agree, and the server's is the one the
- * prediction was made against.
- *
- * Two shapes are read. The one the service actually answers with is flat —
- * { data: { ibus: [ one entry per bus ] } }, with the waiting time already
- * worked out — and is tried first. The one TMB documents nests the buses
- * inside each line of each stop, and is tried second in case an endpoint
- * somewhere answers that way; it is where temps_arribada and propers_busos
- * come in, and those are absolute times, so there a wait is a subtraction
- * against the response's own timestamp rather than the phone's clock.
- *
- * The stops endpoint is a different matter: it is GeoJSON, documented, and
- * has no way to ask for what is near a point. See buildStopsUrl.
+ * Its times are absolute epoch milliseconds, measured against the response's
+ * own timestamp rather than the phone's clock. /ibus/stops is flat, one
+ * entry per bus, with the waiting time already worked out.
  */
 
 var BASE = 'https://api.tmb.cat/v1';
 
-// The app's own TMB credentials, shipped with it so there is nothing to set
-// up before the first bus time shows up. They ride along in the JS bundle
-// that reaches the phone, so they are public in practice: if the quota ever
-// runs out or they leak, regenerate them at developer.tmb.cat.
 var APP_ID  = 'd4ef8b79';
 var APP_KEY = '71f41c220aa7bcada2565b4ce0dd4ddd';
 
@@ -64,27 +47,19 @@ function auth() {
          '&app_key=' + encodeURIComponent(APP_KEY);
 }
 
-// This is the one that answers with every bus it knows is coming, grouped
-// by line. The older /ibus/stops/<code> gives the same stop but only the
-// nearest bus of each line, which is no use to a screen whose whole job is
-// the one after that.
+// Every bus coming to a stop, grouped by line.
 function buildTimesUrl(stopCode) {
   return BASE + '/itransit/bus/parades/' + encodeURIComponent(stopCode) +
          '?' + auth();
 }
 
 // Every bus stop TMB runs, as GeoJSON. There is no way to ask for the ones
-// near a point: the filter parameter matches properties, not geometry. So
-// the whole list is fetched, boiled down to a coordinate each, and kept on
-// the phone — stops do not move — and the nearby search happens here.
+// near a point: the filter parameter matches properties, not geometry.
 function buildStopsUrl() {
   return BASE + '/transit/parades?' + auth();
 }
 
-// Every bus line TMB runs, which is where the line colours live. Guessing
-// them from the line's first letter gets the families wrong —V29 is red and
-// B24 yellow, not one purple for every V— so they come from here instead,
-// and like the stops they are fetched once and kept.
+// Every bus line TMB runs, which is where the line colours live.
 function buildLinesUrl() {
   return BASE + '/transit/linies/bus?' + auth();
 }
@@ -102,9 +77,8 @@ function toNumber(value) {
   return null;
 }
 
-// Epochs turn up in seconds as often as in milliseconds. 1e9 seconds is
-// 2001 and 1e11 is the year 5138, so a number in that band is seconds and
-// anything outside it is taken as it comes.
+// 1e9 seconds is 2001 and 1e11 is the year 5138: a number in that band is
+// an epoch in seconds, anything outside it is taken as it comes.
 function toMillis(value) {
   var n = toNumber(value);
   if (n === null) return null;
@@ -119,8 +93,7 @@ function paradesOf(json) {
   return [];
 }
 
-// The endpoint is asked about one stop, but it answers with a list, so pick
-// the stop that was asked for and fall back to whatever came back.
+// The answer is a list, so pick the stop asked for, or whatever came back.
 function findStop(json, code) {
   var parades = paradesOf(json);
   for (var i = 0; i < parades.length; i++) {
@@ -132,8 +105,7 @@ function findStop(json, code) {
 }
 
 // Rounded down, the way TMB rounds: its own t-in-min calls 596 seconds nine
-// minutes, not ten. It is also the honest direction — "22 min" means you
-// have at least that long, never less.
+// minutes, not ten.
 function minutesUntil(arrival, now) {
   var at = toMillis(arrival);
   if (at === null) return null;
@@ -154,19 +126,17 @@ function fromParades(json, code) {
     var trip = trips[i] || {};
 
     // nom_linia is what the stop sign says ("H12"); codi_linia is TMB's
-    // internal number for it ("212"), which is no use to anyone waiting.
+    // internal number for it ("212").
     var line = sanitize(trip.nom_linia || trip.codi_linia);
     if (!line) continue;
 
     var dest = sanitize(trip.desti_trajecte).substring(0, MAX_DEST);
     var buses = listOf(trip.propers_busos);
 
-    // Who runs it. The line list only covers the ones TMB operates, so an
-    // AMB line has no colour to look up and this is what it falls back on.
+    // The line list only covers the ones TMB operates.
     var amb = (trip.transit_namespace === 'amb');
 
-    // One row per bus, not per line: the next two buses of the same line,
-    // ten minutes apart, is exactly what someone at the stop wants to see.
+    // One row per bus, not per line.
     for (var j = 0; j < buses.length; j++) {
       var mins = minutesUntil(buses[j] && buses[j].temps_arribada, now);
       if (mins === null) continue;
@@ -176,17 +146,14 @@ function fromParades(json, code) {
   return out;
 }
 
-// What the service actually answers with, read off the live endpoint:
+// The flat shape, from /ibus/stops:
 //
 //   {"status":"success","data":{"ibus":[
 //     {"line":"V23","routeId":"2230","destination":"Can Marcet",
 //      "t-in-min":5,"t-in-s":323,"text-ca":"5 min"}]}}
 //
-// One entry per bus, with the waiting time already worked out. "line" is
-// what the stop sign says ("V23"); "routeId" is TMB's internal number for
-// it ("2230"), which is no use to anyone waiting. iBus reports the buses it
-// is actually tracking, so a line appears once per bus on its way — often
-// just the one.
+// One entry per bus, the wait already worked out, and only the buses iBus is
+// tracking — often one per line.
 var IBUS_LINE_KEYS = ['line', 'nom_linia', 'route', 'routeId'];
 var IBUS_MIN_KEYS  = ['t-in-min', 'tInMin', 'temps_min', 'minutes'];
 var IBUS_SEC_KEYS  = ['t-in-s', 'tInS', 'temps_s', 'seconds'];
@@ -212,10 +179,8 @@ function fromIbus(json) {
     var line = sanitize(firstString(item, IBUS_LINE_KEYS));
     if (!line) continue;
 
-    // t-in-min is the service's own figure and the one its "9 min" text
-    // agrees with, so it wins. Recomputing it from t-in-s would round 596
-    // seconds up to ten minutes and disagree with every other screen TMB
-    // puts that bus on. Seconds only stand in when minutes are missing.
+    // t-in-min is the service's own figure, and the one its "9 min" text
+    // agrees with. Seconds only stand in when minutes are missing.
     var mins = firstNumber(item, IBUS_MIN_KEYS);
     if (mins === null) {
       var seconds = firstNumber(item, IBUS_SEC_KEYS);
@@ -229,9 +194,7 @@ function fromIbus(json) {
   return out;
 }
 
-// The shape /itransit/bus/parades answers with first, since that is what we
-// ask for. The flat one from /ibus/stops is kept as a fallback: same stop,
-// same buses, one per line.
+// The nested shape first, the flat one as a fallback.
 function parseArrivals(json, code) {
   var out = fromParades(json, code);
   if (out.length === 0) out = fromIbus(json);
@@ -255,8 +218,8 @@ function haversine(lat1, lon1, lat2, lon2) {
   return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// "D6001C", however the field spells it: with a hash, in lower case, or as
-// the eight digits some feeds use for a colour with transparency.
+// "D6001C", with or without a hash, in either case, or eight digits with
+// transparency.
 function normaliseHex(value) {
   var hex = String(value === undefined || value === null ? '' : value)
       .replace(/[^0-9a-fA-F]/g, '').toUpperCase();
@@ -265,9 +228,8 @@ function normaliseHex(value) {
   return (hex.length === 6) ? hex : '';
 }
 
-// The watch shows 64 colours: two bits a channel, in one byte. So a colour
-// travels as the two hex digits of that byte rather than as six of a
-// precision the screen cannot show anyway. "E30613" goes as "F0".
+// The watch shows 64 colours: two bits a channel, in one byte. A colour
+// travels as the two hex digits of that byte, so "E30613" goes as "F0".
 function shortColor(hex) {
   var full = normaliseHex(hex);
   if (!full) return '';
@@ -286,8 +248,7 @@ var LINE_COLOR_KEYS = ['COLOR_LINIA', 'COLOR', 'color_linia', 'color',
                        'route_color', 'COLOR_LINIA_HEX'];
 
 // The colour of each line, by the name written on the bus: { "V29": "..." }.
-// Which property carries it is not documented, so the plausible ones are
-// tried; a line whose colour is not found simply keeps the old guess.
+// Which property carries it is not documented, so several are tried.
 function parseLineColors(json) {
   var features = listOf(json && json.features);
   var out = {};
@@ -301,12 +262,8 @@ function parseLineColors(json) {
   return out;
 }
 
-// The stops, kept down to what a search needs: a code, something to call
-// it, and where it is. A couple of thousand of these live in the phone's
-// storage, so every field that is not one of those three is dropped.
-//
-// The documented shape is GeoJSON, with the coordinates in EPSG:4326 and
-// longitude first.
+// The stops, kept down to what a search needs: code, name and position.
+// GeoJSON, coordinates in EPSG:4326, longitude first.
 function parseStopIndex(json) {
   var features = listOf(json && json.features);
   var out = [];
@@ -351,23 +308,14 @@ function pickStopName(json, code) {
   var stop = findStop(json, code);
   if (stop) return sanitize(stop.nom_parada);
 
-  // The live answer carries no stop name at all, so this usually comes back
-  // empty and the name the watch already has is the one that shows.
+  // The flat shape carries no stop name, so this often comes back empty.
   var raw = listOf(json && json.data && json.data.ibus);
   return raw.length ? sanitize(firstString(raw[0], IBUS_NAME_KEYS)) : '';
 }
 
-// Everything travels in one string with a size limit, and the watch keeps a
-// fixed number of arrivals, so what gets left out matters.
-//
-// Sorted purely by time, the message fills up with whatever is soonest, and
-// at a stop with a dozen lines that is the first bus of each of them plus
-// the tail of the two or three earliest. Every other line loses its second
-// bus, which is exactly what a line's detail screen goes looking for.
-//
-// So they go out by rank instead: every line's next bus, then every line's
-// one after that, then the thirds. Within a rank the soonest goes first,
-// which is the order they arrive in.
+// One string with a size limit, and the watch keeps a fixed number of
+// arrivals, so they go out by rank: every line's next bus, then every line's
+// one after that, then the thirds. Within a rank, soonest first.
 function encodeArrivals(arrivals) {
   var perLine = {};
   var ranked = [];
@@ -384,10 +332,8 @@ function encodeArrivals(arrivals) {
     return (a.rank !== b.rank) ? a.rank - b.rank : a.order - b.order;
   });
 
-  // A line's destination and colour are the line's, not the bus's, so they
-  // are written once and left empty on the rest: the watch fills those in
-  // from the first bus of the same line. "V29|22||" instead of repeating
-  // "Diagonal Mar|E30613" buys back the room the colours cost.
+  // A line's destination and colour are written once, on its first bus, and
+  // left empty on the rest for the watch to fill in.
   var parts = [];
   var length = 0;
   var said = {};
@@ -411,9 +357,7 @@ function encodeArrivals(arrivals) {
   return parts.join('');
 }
 
-// A third field carries how far away the stop is, in whole metres, for the
-// ones that know. Favourites have no distance and simply leave it off; the
-// watch reads what is there and ignores what is not.
+// A third field carries the distance in whole metres, where there is one.
 function encodeStops(stops) {
   var parts = [];
   var length = 0;

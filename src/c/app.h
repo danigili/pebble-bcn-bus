@@ -8,10 +8,7 @@
 
 #define MAX_FAVS      12
 #define MAX_NEARBY    16
-// Two per line at a stop with a dozen lines, and room to spare: a line's
-// second bus is the whole point of its detail screen, and with sixteen
-// slots the soonest bus of every line filled them all on its own.
-#define MAX_ARRIVALS  32
+#define MAX_ARRIVALS  32   // two per line at a stop with a dozen lines
 
 #define CODE_LEN       7
 #define NAME_LEN      28
@@ -22,10 +19,11 @@
 
 // ------------------------------------------------------- wire protocol
 //
-// Payloads are packed strings rather than one dictionary key per item,
-// because an AppMessage dictionary is small and every key costs overhead.
-//   arrivals : "line|mins|dest;line|mins|dest;..."
-//   stops    : "code|name;code|name;..."
+// Payloads are packed strings rather than one dictionary key per item, an
+// AppMessage dictionary being small. A field left empty is the one already
+// given for that line.
+//   arrivals : "line|mins|dest|colour;line|mins|dest|colour;..."
+//   stops    : "code|name|metres;code|name|metres;..."
 
 // watch -> phone, sent as MESSAGE_KEY_CMD
 #define CMD_REQ_TIMES   1
@@ -76,9 +74,8 @@ void  str_copy(char *dst, const char *src, size_t cap);
 
 // -------------------------------------------------------- favorites.c
 //
-// The watch owns the favourites; the phone keeps a mirror so they can be
-// edited from the settings page. That way adding one still works with the
-// phone out of range.
+// The watch owns the kept stops; the phone mirrors them so they can be
+// edited from the settings page.
 
 void        favs_load(void);
 int         favs_count(void);
@@ -94,8 +91,7 @@ void        favs_encode(char *out, size_t cap);
 typedef void (*CommHandler)(int msg_type);
 
 void comm_init(void);
-// Returns the handler that was installed before, so a window can put it
-// back when it unloads and the window underneath takes over again.
+// Returns the handler installed before, for a window to put back on unload.
 CommHandler comm_set_handler(CommHandler handler);
 void comm_req_times(const char *code);
 void comm_req_nearby(void);
@@ -106,9 +102,8 @@ extern Arrival g_arrivals[MAX_ARRIVALS];
 extern int     g_arrival_count;
 extern Stop    g_nearby[MAX_NEARBY];
 extern int     g_nearby_count;
-// Metres to each of those, or -1 where the phone did not say. Kept beside
-// the stops rather than inside them: a Stop is what a favourite is stored
-// as, and growing it would orphan everything already saved on the watch.
+// Metres to each of those, or -1 where the phone did not say. Beside the
+// stops and not inside them: a Stop is what persistent storage holds.
 extern int     g_nearby_dist[MAX_NEARBY];
 extern char    g_error[ERR_LEN];
 extern char    g_title[NAME_LEN];
@@ -119,22 +114,19 @@ void win_main_push(void);
 void win_favs_push(void);
 void win_nearby_push(void);
 void win_stop_push(const Stop *stop);
-// Picking a line in a stop's list opens its detail: the next two buses of
-// that line, and which stop they are coming to.
+// One line at one stop: its next two buses.
 void win_line_push(const Stop *stop, const char *line);
 void win_keypad_push(void);
 
 // ---------------------------------------------------------------- ui.c
 
 void   ui_theme_menu(MenuLayer *menu);
-// Every window wears one, so the time is always on screen.
+// The status bar, on every window.
 StatusBarLayer *ui_status_bar_add(Window *window);
 GRect  ui_content_bounds(Window *window);
-// The line's own colour when TMB told us, and a guess from its name when
-// it did not.
+// The line's own colour, or one guessed from its name when none was sent.
 GColor ui_arrival_color(const Arrival *arrival);
 GColor ui_line_color(const char *line);
 GColor ui_accent(void);
-// The mark on a stop that has been kept, drawn because no font is sure to
-// have a star in it.
+// The mark on a stop that has been kept.
 void   ui_draw_star(GContext *ctx, GPoint centre, int radius);

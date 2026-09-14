@@ -55,16 +55,6 @@ at the top of all of them.
 header says whether it is kept. Catalan, Spanish and English, set from the
 phone.
 
-## Credentials
-
-TMB credentials **ship with the app**, in `src/pkjs/tmb.js`, so there is
-nothing to set up: install it and it works.
-
-They travel inside the JavaScript bundle and this repository is public, so
-treat them as public too — the quota is shared. To use your own, register at
-[developer.tmb.cat](https://developer.tmb.cat/) and change `APP_ID` and
-`APP_KEY` in that file.
-
 ## Build and install
 
 You need the [Pebble SDK](https://developer.repebble.com/), or
@@ -148,7 +138,7 @@ without hardware.
 ## Without a watch
 
 The emulator runs the phone's JavaScript on your machine, so **real calls to
-TMB work**, credentials included.
+TMB work**.
 
     pebble install --emulator emery
 
@@ -175,11 +165,6 @@ menu icon (`resources/images/menu-icon.png`) and the store's
 What is left needs a watch or the emulator: **screenshots**, at each
 platform's exact size (144×168 Basalt and Diorite, 180×180 Chalk, 200×228
 Emery), via `pebble screenshot`.
-
-One thing to settle before publishing rather than after: **the TMB
-credentials ship inside the bundle**, so everyone who installs it uses
-yours and the quota is shared. If that does not sit right, move them back
-to the settings screen.
 
 ## Licence
 
