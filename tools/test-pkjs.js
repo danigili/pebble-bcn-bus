@@ -284,6 +284,14 @@ check('eight digits are a colour with transparency',
 check('anything else is no colour at all', TMB.normaliseHex('blau'), '');
 check('and so is nothing', TMB.normaliseHex(undefined), '');
 
+// The colours a line falls back on when TMB's list does not carry it. The
+// rule lives in index.js, so this is the shape of it, checked here where
+// the codes are: night first, then whoever runs it.
+check('the night blue and the AMB yellow are different codes',
+      TMB.shortColor('1B3D8F') === TMB.shortColor('FFD800'), false);
+check('night blue', TMB.shortColor('1B3D8F'), 'C6');
+check('AMB yellow', TMB.shortColor('FFD800'), 'FC');
+
 check('a colour travels as a fourth field, two characters wide',
       TMB.encodeArrivals([{ line: 'V29', mins: 3, dest: 'Diagonal Mar',
                             color: 'F0' }]),

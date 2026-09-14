@@ -128,17 +128,28 @@ function refreshLineColors() {
   }, STOPS_TIMEOUT);
 }
 
-// The AMB's own yellow, for the lines its operators run: they are not in
-// TMB's line list, so there is no colour of theirs to look up.
-var AMB_COLOR = TMB.shortColor('FFD800');
+var NIGHT_COLOR = TMB.shortColor('1B3D8F');   // the Nitbus dark blue
+var AMB_COLOR   = TMB.shortColor('FFD800');   // the AMB's yellow
+
+// What colour a line gets when TMB's list does not have it, which means
+// every line one of the other AMB operators runs.
+//
+// Night buses come first: the Nitbus is run by the AMB too, so going by the
+// operator alone painted the whole night network yellow. A line called N8
+// says what it is in its name, and that beats knowing who drives it.
+function fallbackColor(arrival) {
+  if (arrival.line.charAt(0).toUpperCase() === 'N') return NIGHT_COLOR;
+  if (arrival.amb) return AMB_COLOR;
+  return '';    // nothing to say: the watch guesses from the name
+}
 
 function paint(arrivals) {
   var cached = loadLineColors();
   var colors = (cached && cached.colors) || {};
 
   for (var i = 0; i < arrivals.length; i++) {
-    var known = colors[arrivals[i].line.toUpperCase()];
-    arrivals[i].color = known || (arrivals[i].amb ? AMB_COLOR : '');
+    arrivals[i].color = colors[arrivals[i].line.toUpperCase()] ||
+                        fallbackColor(arrivals[i]);
   }
   return arrivals;
 }

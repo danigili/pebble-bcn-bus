@@ -124,8 +124,13 @@ cap al rellotge s'estalvia quatre caràcters per línia.
 
 Aquella llista, però, només porta **les línies que opera TMB**. Les dels
 altres operadors de l'AMB no hi són, i es reconeixen per la resposta mateixa
-(`transit_namespace: "amb"`): van amb el groc de l'AMB, que és el que els
-toca. La B24 sortia vermella per això.
+(`transit_namespace: "amb"`): van amb el groc de l'AMB. La B24 sortia
+vermella per això.
+
+Amb una excepció que va abans: **els busos de nit**. El Nitbus també el
+porta l'AMB, així que mirar només qui opera la línia pintava tota la xarxa
+nocturna de groc. Una línia que es diu N8 ja diu el que és, i el seu blau
+fosc guanya.
 
 La deducció per la primera lletra només queda per als primers segons després
 d'instal·lar, abans que el mòbil tingui la llista.
