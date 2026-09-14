@@ -17,9 +17,9 @@ import zlib
 # each corner, and the wheels show below the body with a gap between them.
 BODY = [(19, 2), (81, 2), (86, 7), (86, 84), (14, 84), (14, 7)]
 # Head on you see the tread, not the rim: a block at each bottom corner,
-# a little wider than the body and standing below it.
-WHEELS = [[(8, 74), (30, 74), (30, 95), (8, 95)],
-          [(70, 74), (92, 74), (92, 95), (70, 95)]]
+# flush with the side of the body and showing below it.
+WHEELS = [[(14, 78), (30, 78), (30, 94), (14, 94)],
+          [(70, 78), (86, 78), (86, 94), (70, 94)]]
 WINDSCREEN = [(23, 22), (77, 22), (77, 48), (23, 48)]
 SIGN = [(32, 8), (68, 8), (68, 16), (32, 16)]        # where the line number goes
 BUMPER = [(20, 71), (80, 71), (80, 77), (20, 77)]
