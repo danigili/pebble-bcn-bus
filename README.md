@@ -229,6 +229,28 @@ d'arribada absoluts dins de `parades[].linies_trajectes[].propers_busos[]`,
 que es resten del `timestamp` de la mateixa resposta per saber quants minuts
 falten.
 
+## Publicar-la
+
+    pebble build            # deixa el .pbw a build/
+
+El paquet que se'n surt ja porta l'UUID, la versió i les plataformes, i és
+el que es puja a la fitxa de la store. Les icones no són a mà: les dibuixa
+`python3 tools/make-icons.py`, i d'aquí surten la del menú del rellotge
+(`resources/images/menu-icon.png`, 25 px, blanc sobre res) i la de la fitxa
+(`docs/store-icon.png`, 144 px).
+
+El que hi falta i només es pot fer amb un rellotge o l'emulador a mà són
+**les captures**, que la store demana a la mida exacta de cada plataforma
+(144×168 Basalt i Diorite, 180×180 Chalk, 200×228 Emery):
+
+    pebble install --emulator emery
+    pebble screenshot
+
+I una cosa a decidir abans de publicar, no després: **les credencials de
+TMB van dins del paquet**. Qui se la instal·li farà servir les teves i la
+quota és compartida. Si això no fa el pes, tornen a la pantalla de
+configuració i cadascú hi posa les seves.
+
 ## Llicència
 
-MIT.
+MIT. Vegeu [LICENSE](LICENSE).
