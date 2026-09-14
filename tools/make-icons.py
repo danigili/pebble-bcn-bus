@@ -13,12 +13,14 @@ import os
 import struct
 import zlib
 
-# The bus front, drawn in a 100 x 100 box.
-BODY = [(26, 2), (74, 2), (86, 14), (86, 92), (14, 92), (14, 14)]
-WINDSCREEN = [(23, 20), (77, 20), (77, 48), (23, 48)]
-SIGN = [(32, 7), (68, 7), (68, 15), (32, 15)]        # where the line number goes
-BUMPER = [(20, 80), (80, 80), (80, 87), (20, 87)]
-LIGHTS = [(27, 63, 9), (73, 63, 9)]
+# The bus front, drawn in a 100 x 100 box. The roof is square bar a nick off
+# each corner, and the wheels show below the body with a gap between them.
+BODY = [(19, 2), (81, 2), (86, 7), (86, 84), (14, 84), (14, 7)]
+WHEELS = [(29, 86, 10), (71, 86, 10)]
+WINDSCREEN = [(23, 22), (77, 22), (77, 48), (23, 48)]
+SIGN = [(32, 8), (68, 8), (68, 16), (32, 16)]        # where the line number goes
+BUMPER = [(20, 71), (80, 71), (80, 77), (20, 77)]
+LIGHTS = [(28, 60, 8), (72, 60, 8)]
 
 
 def blank(size):
@@ -59,6 +61,12 @@ def draw_front(size, body, detail, detailed):
 
     def at(points):
         return [(margin + x * scale, margin + y * scale) for x, y in points]
+
+    # The wheels first, so the body sits over the top of them and they only
+    # show below it.
+    for wx, wy, wr in WHEELS:
+        fill_circle(image, margin + wx * scale, margin + wy * scale,
+                    wr * scale, body)
 
     fill_polygon(image, at(BODY), body)
     fill_polygon(image, at(WINDSCREEN), detail)
