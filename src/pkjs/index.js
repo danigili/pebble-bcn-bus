@@ -41,13 +41,16 @@ var MAX_NEARBY = 16;   // the watch keeps this many
 var TEXT = {
   ca: { creds: 'Credencials rebutjades', net: 'Sense connexio',
         http: 'Error del servidor', gps: 'Sense ubicacio',
-        none: 'Cap parada a prop', stop: 'Parada' },
+        none: 'Cap parada a prop', stop: 'Parada',
+        nostop: 'Aquesta parada no existeix' },
   es: { creds: 'Credenciales rechazadas', net: 'Sin conexion',
         http: 'Error del servidor', gps: 'Sin ubicacion',
-        none: 'Ninguna parada cerca', stop: 'Parada' },
+        none: 'Ninguna parada cerca', stop: 'Parada',
+        nostop: 'Esa parada no existe' },
   en: { creds: 'Credentials rejected', net: 'No connection',
         http: 'Server error', gps: 'No location',
-        none: 'No stops nearby', stop: 'Stop' }
+        none: 'No stops nearby', stop: 'Stop',
+        nostop: 'No such stop' }
 };
 
 // ------------------------------------------------------------- storage
@@ -279,6 +282,14 @@ function shapeOf(json) {
 
 function handleTimes(code) {
   httpGet(TMB.buildTimesUrl(code), function (json) {
+    // A code nobody has heard of, rather than a stop with nothing due: say
+    // so instead of answering about a stop that does not exist.
+    if (!TMB.namesStop(json, code)) {
+      console.log('stop ' + code + ': not in the answer');
+      sendError(text('nostop'));
+      return;
+    }
+
     // The name the user gave it, then the API's, then one built from the
     // code.
     var name = favouriteName(code) ||
@@ -307,7 +318,7 @@ function handleTimes(code) {
       TITLE: TMB.sanitize(name).substring(0, 26)
     });
   }, function (status, message) {
-    sendError(message);
+    sendError(status === 404 ? text('nostop') : message);
   });
 }
 

@@ -65,6 +65,7 @@ typedef enum {
 // ------------------------------------------------------------- util.c
 
 const char *i18n(StrId id);
+void        lang_load(void);
 void        lang_set(Lang lang);
 Lang        lang_get(void);
 

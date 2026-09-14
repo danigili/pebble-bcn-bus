@@ -207,6 +207,22 @@ function fromIbus(json) {
 }
 
 // The nested shape first, the flat one as a fallback.
+// Whether the answer is about the stop that was asked for. The nested shape
+// lists the stops it knows, so a code it does not know comes back with none.
+// The flat shape cannot tell an unknown stop from a quiet one.
+function namesStop(json, code) {
+  var nested = json && (json.parades || (json.data && json.data.parades));
+  if (!nested) return true;
+
+  var parades = listOf(nested);
+  for (var i = 0; i < parades.length; i++) {
+    if (parades[i] && String(parades[i].codi_parada) === String(code)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function parseArrivals(json, code) {
   var out = fromParades(json, code);
   if (out.length === 0) out = fromIbus(json);
@@ -412,6 +428,7 @@ var TMB = {
   normaliseHex: normaliseHex,
   shortColor: shortColor,
   parseArrivals: parseArrivals,
+  namesStop: namesStop,
   parseStopIndex: parseStopIndex,
   nearestStops: nearestStops,
   pickStopName: pickStopName,

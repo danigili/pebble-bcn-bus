@@ -107,13 +107,15 @@ def write_png(path, image):
 
 
 WHITE = (255, 255, 255, 255)
+BLACK = (0, 0, 0, 255)
 CLEAR = (0, 0, 0, 0)
 TMB_RED = (214, 0, 28, 255)
 
 if __name__ == '__main__':
-    # The watch's own menu icon: a white shape on nothing.
+    # Black on nothing, not white: the phone lists apps on a light
+    # background, where a white shape is not there at all.
     write_png('resources/images/menu-icon.png',
-              draw_front(25, WHITE, CLEAR, False))
+              draw_front(25, BLACK, CLEAR, False))
 
     # For the store listing, where there is room for the detail.
     icon = [[TMB_RED] * 144 for _ in range(144)]

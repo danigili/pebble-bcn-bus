@@ -142,6 +142,18 @@ int main(void) {
   check_str("catalan", i18n(T_FAVOURITES), "Preferides");
   check_str("an out of range id is empty, not a crash", i18n((StrId)999), "");
 
+  // The watch keeps the language, so the first screen after a launch is
+  // already in it rather than in Catalan until the phone says otherwise.
+  lang_set(LANG_EN);
+  check_int("setting a language keeps it", (int)persist_read_int(3), (int)LANG_EN);
+  persist_write_int(3, (int32_t)LANG_ES);
+  lang_load();
+  check_str("and a launch reads it back", i18n(T_FAVOURITES), "Favoritas");
+  persist_write_int(3, 99);
+  lang_load();
+  check_str("a stored value out of range is ignored", i18n(T_FAVOURITES),
+            "Favoritas");
+
   printf("\n%s\n", failures == 0
       ? "all checks passed"
       : "SOME CHECKS FAILED");

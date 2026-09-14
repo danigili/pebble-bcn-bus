@@ -1,6 +1,7 @@
 #include "app.h"
 
 static void init(void) {
+  lang_load();
   favs_load();
   comm_init();
   win_main_push();

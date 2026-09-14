@@ -63,25 +63,25 @@ check('while a TMB line is not', TMB.parseArrivals(live, '1178')[0].amb, false);
 // The older /ibus/stops answer, copied from that endpoint: one entry per
 // line, the waiting time already worked out, and no stop name in it. Still
 // read, as a fallback.
-var live = { status: 'success', data: { ibus: [
+var flat = { status: 'success', data: { ibus: [
   { destination: 'Can Marcet', line: 'V23', routeId: '2230',
     't-in-min': 5, 't-in-s': 323, 'text-ca': '5 min' },
   { destination: 'Montbau', line: 'V21', routeId: '2210',
     't-in-min': 9, 't-in-s': 596, 'text-ca': '9 min' }
 ] } };
 
-check('the live shape is read as it comes', TMB.parseArrivals(live, '365'),
+check('the flat shape is read as it comes', TMB.parseArrivals(flat, '365'),
       [{ line: 'V23', mins: 5, dest: 'Can Marcet' },
        { line: 'V21', mins: 9, dest: 'Montbau' }]);
 check('the line is the one on the stop sign, not routeId',
-      TMB.parseArrivals(live, '365')[0].line, 'V23');
+      TMB.parseArrivals(flat, '365')[0].line, 'V23');
 // 596 seconds is 9.93 minutes. TMB says nine, and so does its own text.
 check('the minutes are the service own, not recomputed from the seconds',
-      TMB.parseArrivals(live, '365')[1].mins, 9);
+      TMB.parseArrivals(flat, '365')[1].mins, 9);
 check('seconds stand in only when minutes are missing',
       TMB.parseArrivals({ data: { ibus: [{ line: 'H6', 't-in-s': 200 }] } },
                         '365')[0].mins, 3);
-check('no stop name comes with it', TMB.pickStopName(live, '365'), '');
+check('no stop name comes with it', TMB.pickStopName(flat, '365'), '');
 
 // The shape the service really answers with, kept verbatim from a live
 // response so the parser is tested against the thing and not a sketch of it.
@@ -236,6 +236,19 @@ check('a line split across trajectes keeps all its buses',
           { nom_linia: 'V31', propers_busos: [{ temps_arribada: 8 * 60000 }] },
           { nom_linia: 'V31', propers_busos: [{ temps_arribada: 23 * 60000 }] }
         ] }] }, '365').length, 2);
+
+// A code the service has never heard of comes back with no stop in it, which
+// is not the same as a stop with nothing due.
+truthy('the answer names the stop that was asked for',
+       TMB.namesStop(live, '1178'));
+truthy('a code the answer does not mention is not a stop',
+       !TMB.namesStop(live, '99999'));
+truthy('nor is one that comes back with an empty list',
+       !TMB.namesStop({ timestamp: 1, parades: [] }, '99999'));
+truthy('the flat shape cannot tell, so it does not claim to',
+       TMB.namesStop({ data: { ibus: [] } }, '99999'));
+truthy('and neither can an answer with nothing in it',
+       TMB.namesStop({}, '99999'));
 
 check('empty response is handled', TMB.parseArrivals({}, '366'), []);
 check('null response is handled', TMB.parseArrivals(null, '366'), []);

@@ -1,5 +1,7 @@
 #include "app.h"
 
+#define PK_LANG 3
+
 static Lang s_lang = LANG_CA;
 
 static const char *const s_strings[T_STR_COUNT][LANG_COUNT] = {
@@ -17,14 +19,14 @@ static const char *const s_strings[T_STR_COUNT][LANG_COUNT] = {
   { "Desada",           "Guardada",          "Saved"           },  // T_ADDED
   { "Esborrada",        "Borrada",           "Removed"         },  // T_REMOVED
   { "Codi de parada",   "Código parada","Stop code"       },  // T_STOP_CODE
-  { "Mantén central: cerca", "Mantén central: buscar",
+  { "Mantingues central: cerca", "Mantén central: buscar",
     "Hold Select: search" },                                    // T_HOLD_SEARCH
   { "Amunt/Avall: xifra\nCentral: xifra nova",
     "Arriba/Abajo: cifra\nCentral: nueva cifra",
     "Up/Down: digit\nSelect: new digit" },                       // T_BTN_LEGEND
   { "Sense mòbil", "Sin móvil",    "No phone"        },  // T_NO_PHONE
   { "Preferides plenes","Favoritas llenas",  "Favourites full" },  // T_FAV_FULL
-  { "Mantén per desar", "Mantén para guardar", "Hold to save" }, // T_HOLD_TO_SAVE
+  { "Mantingues per desar", "Mantén para guardar", "Hold to save" }, // T_HOLD_TO_SAVE
   { "Parada",           "Parada",            "Stop"            },  // T_STOP
   { "Cap més previst",  "Ninguno más",       "No more yet"     },  // T_NO_MORE
 };
@@ -34,8 +36,20 @@ const char *i18n(StrId id) {
   return s_strings[id][s_lang];
 }
 
+// Read at startup, so the first frame is already in the right language
+// instead of Catalan until the phone gets a word in.
+void lang_load(void) {
+  if (!persist_exists(PK_LANG)) return;
+
+  int32_t stored = persist_read_int(PK_LANG);
+  if (stored >= 0 && stored < LANG_COUNT) s_lang = (Lang)stored;
+}
+
 void lang_set(Lang lang) {
-  if ((unsigned)lang < LANG_COUNT) s_lang = lang;
+  if ((unsigned)lang >= LANG_COUNT || lang == s_lang) return;
+
+  s_lang = lang;
+  persist_write_int(PK_LANG, (int32_t)lang);
 }
 
 Lang lang_get(void) {
