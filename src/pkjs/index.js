@@ -52,6 +52,12 @@ var TEXT = {
 
 // ------------------------------------------------------------- storage
 
+// The user's own credentials, when they have entered a pair.
+function applyCredentials() {
+  var settings = loadSettings();
+  TMB.useCredentials(settings.app_id, settings.app_key);
+}
+
 function loadSettings() {
   try {
     return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
@@ -375,6 +381,7 @@ function handleNearby() {
 // --------------------------------------------------------------- events
 
 Pebble.addEventListener('ready', function () {
+  applyCredentials();
   send({ MSG_TYPE: MSG_READY });
   refreshLineColors();
 });
@@ -418,9 +425,12 @@ Pebble.addEventListener('webviewclosed', function (event) {
   }
 
   saveSettings({
+    app_id: data.app_id || '',
+    app_key: data.app_key || '',
     lang: data.lang || 'ca',
     radius: data.radius || 500
   });
+  applyCredentials();
 
   var favs = data.favs || [];
   saveFavs(favs);

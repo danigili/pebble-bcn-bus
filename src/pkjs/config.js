@@ -6,8 +6,8 @@
  * cannot call the TMB API itself: everything it needs is baked in before it
  * is opened, and everything it produces goes back through the close URL.
  *
- * There is nothing here about credentials: the app ships with its own, so
- * the page only carries preferences and the favourites list.
+ * Credentials are optional here: the app has its own, and the two fields are
+ * for replacing them if they ever stop working.
  */
 
 function escapeHtml(text) {
@@ -18,6 +18,8 @@ function escapeHtml(text) {
 
 function buildConfigPage(settings, favourites) {
   var state = JSON.stringify({
+    app_id: settings.app_id || '',
+    app_key: settings.app_key || '',
     lang: settings.lang || 'ca',
     radius: settings.radius || 500,
     favs: favourites || []
@@ -68,10 +70,22 @@ function buildConfigPage(settings, favourites) {
     '<div id="favs"></div>',
     '<button class="add" id="add" type="button">+ Afegir parada</button>',
 
+    '<h2>Credencials TMB</h2>',
+    '<div class="hint" style="margin:0 0 10px">L\'app en porta unes de pr&ograve;pies ',
+    'i normalment no cal tocar res ac&iacute;. Si deixessin de funcionar, ',
+    'registra una aplicaci&oacute; a developer.tmb.cat i posa les teves. ',
+    'Buides, es fan servir les de sempre.</div>',
+    '<label for="id">app_id</label><input id="id" autocapitalize="off" ',
+    'autocorrect="off" spellcheck="false" placeholder="incloses">',
+    '<label for="key">app_key</label><input id="key" autocapitalize="off" ',
+    'autocorrect="off" spellcheck="false" placeholder="incloses">',
+
     '<div class="bar"><button class="save" id="save" type="button">Desa</button></div>',
 
     '<script>',
     'var S=', state, ';',
+    'document.getElementById("id").value=S.app_id;',
+    'document.getElementById("key").value=S.app_key;',
     'document.getElementById("lang").value=S.lang;',
     'document.getElementById("radius").value=S.radius;',
     'var box=document.getElementById("favs");',
@@ -114,7 +128,9 @@ function buildConfigPage(settings, favourites) {
     '  var name=rows[i].querySelector(".name").value.replace(/[|;]/g,"/").trim();',
     '  favs.push({code:code,name:name||code});',
     ' }',
-    ' var out={lang:document.getElementById("lang").value,',
+    ' var out={app_id:document.getElementById("id").value.trim(),',
+    '  app_key:document.getElementById("key").value.trim(),',
+    '  lang:document.getElementById("lang").value,',
     '  radius:parseInt(document.getElementById("radius").value,10)||500,',
     '  favs:favs};',
     ' location.href=returnUrl()+encodeURIComponent(JSON.stringify(out));',

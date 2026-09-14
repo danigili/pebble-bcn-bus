@@ -20,6 +20,18 @@ var BASE = 'https://api.tmb.cat/v1';
 var APP_ID  = 'd4ef8b79';
 var APP_KEY = '71f41c220aa7bcada2565b4ce0dd4ddd';
 
+// A pair the user entered on the settings page, for when the ones above stop
+// working. Both or neither: half a pair authenticates nothing.
+var s_id = '';
+var s_key = '';
+
+function useCredentials(id, key) {
+  id = String(id || '').trim();
+  key = String(key || '').trim();
+  s_id = (id && key) ? id : '';
+  s_key = (id && key) ? key : '';
+}
+
 var MAX_PAYLOAD  = 900;   // keep well inside the watch's AppMessage inbox
 var MAX_DEST     = 24;
 var MAX_PER_LINE = 3;     // nobody is waiting for the fourth bus of one line
@@ -43,8 +55,8 @@ function sanitize(text) {
 }
 
 function auth() {
-  return 'app_id=' + encodeURIComponent(APP_ID) +
-         '&app_key=' + encodeURIComponent(APP_KEY);
+  return 'app_id=' + encodeURIComponent(s_id || APP_ID) +
+         '&app_key=' + encodeURIComponent(s_key || APP_KEY);
 }
 
 // Every bus coming to a stop, grouped by line.
@@ -391,6 +403,7 @@ var TMB = {
   BASE: BASE,
   APP_ID: APP_ID,
   APP_KEY: APP_KEY,
+  useCredentials: useCredentials,
   sanitize: sanitize,
   buildTimesUrl: buildTimesUrl,
   buildStopsUrl: buildStopsUrl,

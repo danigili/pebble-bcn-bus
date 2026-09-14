@@ -367,6 +367,25 @@ console.log('\nURLs');
 
 var auth = 'app_id=' + TMB.APP_ID + '&app_key=' + TMB.APP_KEY;
 truthy('the app ships with credentials', !!TMB.APP_ID && !!TMB.APP_KEY);
+
+// The settings page can replace them, for the day they stop working.
+TMB.useCredentials('mine', 'secret');
+truthy('a pair from the settings page is used instead',
+       TMB.buildTimesUrl('366').indexOf('app_id=mine&app_key=secret') > 0);
+truthy('and on every call, not just that one',
+       TMB.buildStopsUrl().indexOf('app_id=mine&app_key=secret') > 0);
+
+TMB.useCredentials('  spaced  ', '  out  ');
+truthy('typed with spaces around them, they still work',
+       TMB.buildTimesUrl('366').indexOf('app_id=spaced&app_key=out') > 0);
+
+TMB.useCredentials('mine', '');
+truthy('half a pair authenticates nothing, so the built-in ones stand',
+       TMB.buildTimesUrl('366').indexOf(auth) > 0);
+
+TMB.useCredentials('', '');
+truthy('and clearing them goes back to the built-in ones',
+       TMB.buildTimesUrl('366').indexOf(auth) > 0);
 check('times url', TMB.buildTimesUrl('366'),
       'https://api.tmb.cat/v1/itransit/bus/parades/366?' + auth);
 
@@ -422,11 +441,13 @@ check('an empty index is handled', TMB.nearestStops([], 41.3874, 2.1686, 500, 16
 
 console.log('\nsettings page');
 
-var html = CONFIG.buildConfigPage({ lang: 'es', radius: 700 },
+var html = CONFIG.buildConfigPage({ app_id: 'a', app_key: 'b', lang: 'es',
+                                    radius: 700 },
                                   [{ code: '366', name: 'Casa' }]);
 truthy('page closes back into the app', html.indexOf('pebblejs://close#') > 0);
 truthy('existing favourites are baked in', html.indexOf('"366"') > 0);
-truthy('the page asks for no credentials', html.indexOf('app_key') < 0);
+truthy('the page offers the credential fields', html.indexOf('app_key') > 0);
+truthy('and fills them with whatever is set', html.indexOf('"a"') > 0);
 truthy('fits comfortably in a data: URI', encodeURIComponent(html).length < 60000);
 truthy('no stray closing script tag breaks the page',
        html.split('<script>').length === html.split('<\/script>').length);
