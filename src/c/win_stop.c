@@ -96,8 +96,8 @@ static void draw_header(GContext *ctx, const Layer *cell, uint16_t section,
 
   // A star marks a stop that has been kept.
   if (is_fav) {
-    graphics_context_set_fill_color(ctx, GColorWhite);
-    ui_draw_star(ctx, GPoint(bounds.size.w - 13, bounds.size.h / 2), 9);
+    ui_draw_star(ctx, GPoint(bounds.size.w - 13, bounds.size.h / 2), 10,
+                 GColorWhite);
   }
 }
 

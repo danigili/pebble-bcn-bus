@@ -2,8 +2,8 @@
 
 #define REFRESH_MS 30000
 #define SHOWN_BUSES  2      // the next two of this line, and only those
-#define BAND_H      28      // the line's own colour, with its number on it
-#define STOP_H      18      // which stop all this is about
+#define BAND_H      32      // the line's own colour, with its number on it
+#define STOP_H      22      // which stop all this is about
 #define HEADER_H    (BAND_H + STOP_H)
 
 // One line at one stop: its next two buses, filtered out of the arrivals the
@@ -86,23 +86,26 @@ static void draw_header(GContext *ctx, GRect bounds, int y) {
 
   graphics_context_set_text_color(ctx, GColorWhite);
   graphics_draw_text(ctx, s_line, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
-                     GRect(inset, y - 3, text_w, 28),
+                     GRect(inset, y - 1, text_w, 30),
                      GTextOverflowModeFill, GTextAlignmentLeft, NULL);
 
+  // Whatever the line's name leaves of the band, which is most of it.
   const char *dest = destination();
   if (dest[0] != '\0') {
-    graphics_draw_text(ctx, dest, fonts_get_system_font(FONT_KEY_GOTHIC_14),
-                       GRect(inset + 52, y + 5, text_w - 52, 20),
+    graphics_draw_text(ctx, dest, fonts_get_system_font(FONT_KEY_GOTHIC_18),
+                       GRect(inset + 44, y + 6, text_w - 44, 24),
                        GTextOverflowModeTrailingEllipsis, GTextAlignmentRight,
                        NULL);
   }
 
+  // The stop's name takes the type; its code keeps the small, since it is
+  // four digits that nobody reads at a glance.
   graphics_context_set_text_color(ctx, GColorBlack);
-  graphics_draw_text(ctx, s_stop.name, fonts_get_system_font(FONT_KEY_GOTHIC_14),
-                     GRect(inset, y + BAND_H - 2, text_w - 46, STOP_H),
+  graphics_draw_text(ctx, s_stop.name, fonts_get_system_font(FONT_KEY_GOTHIC_18),
+                     GRect(inset, y + BAND_H - 2, text_w - 38, STOP_H),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
   graphics_draw_text(ctx, s_stop.code, fonts_get_system_font(FONT_KEY_GOTHIC_14),
-                     GRect(bounds.size.w - inset - 40, y + BAND_H - 2, 40, STOP_H),
+                     GRect(bounds.size.w - inset - 36, y + BAND_H + 1, 36, STOP_H),
                      GTextOverflowModeFill, GTextAlignmentRight, NULL);
 }
 

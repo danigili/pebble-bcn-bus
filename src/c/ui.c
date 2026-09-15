@@ -45,7 +45,7 @@ static const GPoint STAR[] = {
 #define STAR_POINTS (sizeof(STAR) / sizeof(STAR[0]))
 
 // The points sit around the origin; gpath_move_to places them.
-void ui_draw_star(GContext *ctx, GPoint centre, int radius) {
+void ui_draw_star(GContext *ctx, GPoint centre, int radius, GColor colour) {
   static GPoint    s_points[STAR_POINTS];
   static GPathInfo s_info = { STAR_POINTS, s_points };
   static GPath    *s_star;
@@ -64,7 +64,14 @@ void ui_draw_star(GContext *ctx, GPoint centre, int radius) {
   }
 
   gpath_move_to(s_star, centre);
+
+  // Filled and then outlined in the same colour: a five-pointed star ends in
+  // a tip one pixel wide, and filling alone leaves it off.
+  graphics_context_set_fill_color(ctx, colour);
+  graphics_context_set_stroke_color(ctx, colour);
+  graphics_context_set_stroke_width(ctx, 1);
   gpath_draw_filled(ctx, s_star);
+  gpath_draw_outline(ctx, s_star);
 }
 
 GColor ui_accent(void) {
