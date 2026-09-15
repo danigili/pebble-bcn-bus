@@ -59,6 +59,14 @@ function auth() {
          '&app_key=' + encodeURIComponent(s_key || APP_KEY);
 }
 
+// Whether a failed request is worth making again. No connection, a timeout
+// (both of which arrive as 0), the server having a moment, or being asked to
+// slow down. Credentials it will not take and a stop it does not have are
+// answers, not accidents: asking twice only spends the quota again.
+function worthRetrying(status) {
+  return status === 0 || status === 429 || status >= 500;
+}
+
 // A stop code as the service knows it: digits only, and without the zeros a
 // stop sign pads it out with. "0828" is 828. All zeros keeps one.
 function stopCode(text) {
@@ -431,6 +439,7 @@ var TMB = {
   useCredentials: useCredentials,
   sanitize: sanitize,
   stopCode: stopCode,
+  worthRetrying: worthRetrying,
   buildTimesUrl: buildTimesUrl,
   buildStopsUrl: buildStopsUrl,
   buildLinesUrl: buildLinesUrl,

@@ -19,7 +19,6 @@ var LINES_KEY = 'bcnbus:lines';
 
 // How old the stop and line lists may get before they are fetched again.
 var STOPS_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
-var STOPS_TIMEOUT = 45000;   // it is every stop TMB runs, so allow for it
 
 // watch -> phone
 var CMD_REQ_TIMES = 1;
@@ -36,6 +35,22 @@ var MSG_NEARBY = 5;
 var LANGS = { ca: 0, es: 1, en: 2 };
 
 var MAX_NEARBY = 16;   // the watch keeps this many
+
+// A request that fails for a passing reason is made again, waiting a little
+// longer each time. How many goes and how long each waits is the caller's
+// call, because every chain has a window it must not run past.
+var RETRY_WAIT_MS = [1200, 3500];
+
+// Times: the watch asks again by itself every 30 seconds, so three quick
+// goes have to fit inside that. The answer is small, so 8 seconds is
+// already a long time to be waiting for it.
+var TIMES_TIMEOUT = 8000;
+var TIMES_RETRIES = 2;
+
+// The stop list is a megabyte and the watch gives up on the search after 70
+// seconds, which leaves room for one more go and no more.
+var STOPS_TIMEOUT = 25000;
+var STOPS_RETRIES = 1;
 
 // Kept short: the watch truncates these to 47 characters.
 var TEXT = {
@@ -130,7 +145,7 @@ function refreshLineColors() {
   }, function (status, message, body) {
     console.log('lines: HTTP ' + status + ' ' +
                 String(body || '').substring(0, 200));
-  }, STOPS_TIMEOUT);
+  }, STOPS_TIMEOUT, STOPS_RETRIES);
 }
 
 var NIGHT_COLOR = TMB.shortColor('1B3D8F');   // the Nitbus dark blue
@@ -200,29 +215,52 @@ function sendError(message) {
   send({ MSG_TYPE: MSG_ERROR, PAYLOAD: String(message).substring(0, 47) });
 }
 
-function httpGet(url, onOk, onFail, timeout) {
+function httpGet(url, onOk, onFail, timeout, retries) {
+  attempt(url, onOk, onFail, timeout || 15000,
+          (retries === undefined) ? RETRY_WAIT_MS.length : retries, 0);
+}
+
+function attempt(url, onOk, onFail, timeout, retries, tries) {
   var request = new XMLHttpRequest();
   request.open('GET', url, true);
-  request.timeout = timeout || 15000;
+  request.timeout = timeout;
+
+  // Either hand the failure on, or wait a moment and go again.
+  function failed(status, message, body, retryable) {
+    if (tries < retries && retryable) {
+      var wait = RETRY_WAIT_MS[tries];
+      console.log('retrying in ' + wait + 'ms after ' + status + ': ' + url);
+      setTimeout(function () {
+        attempt(url, onOk, onFail, timeout, retries, tries + 1);
+      }, wait);
+      return;
+    }
+    onFail(status, message, body);
+  }
 
   request.onload = function () {
-    if (request.status >= 200 && request.status < 300) {
+    var status = request.status;
+
+    if (status >= 200 && status < 300) {
       var json;
       try {
         json = JSON.parse(request.responseText);
       } catch (e) {
-        onFail(request.status, text('http'), request.responseText);
+        // A good status with a body we cannot read is usually one that got
+        // cut off on the way, which is worth another go.
+        failed(status, text('http'), request.responseText, true);
         return;
       }
       onOk(json);
-    } else if (request.status === 401 || request.status === 403) {
-      onFail(request.status, text('creds'), request.responseText);
+    } else if (status === 401 || status === 403) {
+      failed(status, text('creds'), request.responseText, false);
     } else {
-      onFail(request.status, text('http'), request.responseText);
+      failed(status, text('http'), request.responseText,
+             TMB.worthRetrying(status));
     }
   };
-  request.onerror = function () { onFail(0, text('net')); };
-  request.ontimeout = function () { onFail(0, text('net')); };
+  request.onerror = function () { failed(0, text('net'), '', true); };
+  request.ontimeout = function () { failed(0, text('net'), '', true); };
   request.send();
 }
 
@@ -324,7 +362,7 @@ function handleTimes(code) {
     });
   }, function (status, message) {
     sendError(status === 404 ? text('nostop') : message);
-  });
+  }, TIMES_TIMEOUT, TIMES_RETRIES);
 }
 
 // The stop list, from storage when it is there and from TMB when it is not.
@@ -359,7 +397,7 @@ function withStopIndex(onReady, onFail) {
                 String(body || '').substring(0, 200));
     if (usable) { onReady(cached.list); return; }
     onFail(message);
-  }, STOPS_TIMEOUT);
+  }, STOPS_TIMEOUT, STOPS_RETRIES);
 }
 
 function handleNearby() {

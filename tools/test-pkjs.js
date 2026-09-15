@@ -274,6 +274,20 @@ console.log('\nencode / parse round trip');
 var stops = [{ code: '366', name: 'Casa' }, { code: '1122', name: 'Feina' }];
 check('stops encode', TMB.encodeStops(stops), '366|Casa;1122|Feina;');
 
+console.log('\nretrying');
+
+// Passing troubles are worth another go.
+truthy('no connection or a timeout', TMB.worthRetrying(0));
+truthy('the server having a moment', TMB.worthRetrying(500));
+truthy('and its gateway too', TMB.worthRetrying(503));
+truthy('being told to slow down', TMB.worthRetrying(429));
+
+// Answers, not accidents: asking again only spends the quota twice.
+truthy('credentials it will not take', !TMB.worthRetrying(401));
+truthy('nor a forbidden one', !TMB.worthRetrying(403));
+truthy('a stop it does not have', !TMB.worthRetrying(404));
+truthy('or anything else it understood and refused', !TMB.worthRetrying(400));
+
 console.log('\nline colours');
 
 var palette = TMB.parseLineColors({ features: [
