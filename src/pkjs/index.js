@@ -231,7 +231,9 @@ function httpGet(url, onOk, onFail, timeout) {
 function favouriteName(code) {
   var favs = loadFavs();
   for (var i = 0; i < favs.length; i++) {
-    if (favs[i].code === code) return favs[i].name;
+    // Compared as the service knows them: one of the two may have been
+    // saved with the zeros a stop sign pads the code out with.
+    if (TMB.stopCode(favs[i].code) === code) return favs[i].name;
   }
   return '';
 }
@@ -281,6 +283,9 @@ function shapeOf(json) {
 }
 
 function handleTimes(code) {
+  code = TMB.stopCode(code);
+  if (!code) { sendError(text('nostop')); return; }
+
   httpGet(TMB.buildTimesUrl(code), function (json) {
     // A code nobody has heard of, rather than a stop with nothing due: say
     // so instead of answering about a stop that does not exist.
@@ -402,7 +407,7 @@ Pebble.addEventListener('appmessage', function (event) {
 
   switch (payload.CMD) {
     case CMD_REQ_TIMES:
-      handleTimes(String(payload.STOP_CODE || '').replace(/[^0-9]/g, ''));
+      handleTimes(payload.STOP_CODE);
       break;
     case CMD_REQ_NEARBY:
       handleNearby();

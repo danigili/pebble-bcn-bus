@@ -59,6 +59,15 @@ function auth() {
          '&app_key=' + encodeURIComponent(s_key || APP_KEY);
 }
 
+// A stop code as the service knows it: digits only, and without the zeros a
+// stop sign pads it out with. "0828" is 828. All zeros keeps one.
+function stopCode(text) {
+  var digits = String(text === undefined || text === null ? '' : text)
+      .replace(/[^0-9]/g, '')
+      .replace(/^0+(?=.)/, '');
+  return digits;
+}
+
 // Every bus coming to a stop, grouped by line.
 function buildTimesUrl(stopCode) {
   return BASE + '/itransit/bus/parades/' + encodeURIComponent(stopCode) +
@@ -421,6 +430,7 @@ var TMB = {
   APP_KEY: APP_KEY,
   useCredentials: useCredentials,
   sanitize: sanitize,
+  stopCode: stopCode,
   buildTimesUrl: buildTimesUrl,
   buildStopsUrl: buildStopsUrl,
   buildLinesUrl: buildLinesUrl,

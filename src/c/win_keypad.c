@@ -19,6 +19,7 @@ static void submit_cb(void *data) {
   Stop stop;
   memset(&stop, 0, sizeof(stop));
   str_copy(stop.code, s_code, CODE_LEN);
+  str_drop_leading_zeros(stop.code);
 
   // Pushed first, then removed, so Back skips the keypad.
   Window *keypad = s_window;

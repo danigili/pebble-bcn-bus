@@ -71,6 +71,8 @@ Lang        lang_get(void);
 
 // Splits a mutable string in place. Returns NULL once exhausted.
 char *str_split(char **cursor, char sep);
+// "0828" becomes "828", in place. Never empties the string.
+void  str_drop_leading_zeros(char *text);
 void  str_copy(char *dst, const char *src, size_t cap);
 
 // -------------------------------------------------------- favorites.c

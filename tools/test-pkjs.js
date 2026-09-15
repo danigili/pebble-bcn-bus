@@ -399,6 +399,13 @@ truthy('half a pair authenticates nothing, so the built-in ones stand',
 TMB.useCredentials('', '');
 truthy('and clearing them goes back to the built-in ones',
        TMB.buildTimesUrl('366').indexOf(auth) > 0);
+// A stop sign pads the code out to four digits; the service does not.
+check('the zeros a stop sign pads with come off', TMB.stopCode('0828'), '828');
+check('a code without them is left alone', TMB.stopCode('828'), '828');
+check('all zeros keeps one, so it stays a code', TMB.stopCode('0000'), '0');
+check('anything that is not a digit goes', TMB.stopCode(' 08 28 '), '828');
+check('nothing in, nothing out', TMB.stopCode(''), '');
+
 check('times url', TMB.buildTimesUrl('366'),
       'https://api.tmb.cat/v1/itransit/bus/parades/366?' + auth);
 

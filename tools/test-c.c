@@ -71,6 +71,22 @@ int main(void) {
   str_copy(buffer, NULL, sizeof(buffer));
   check_str("NULL becomes empty", buffer, "");
 
+  printf("\nstop codes\n");
+  {
+    // A stop sign pads the code to four digits; the service does not.
+    struct { const char *typed; const char *want; } cases[] = {
+      { "0828", "828" }, { "828", "828" }, { "0000", "0" },
+      { "00007", "7" },  { "0", "0" },     { "", "" },
+    };
+    for (unsigned i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+      char code[CODE_LEN];
+      str_copy(code, cases[i].typed, sizeof(code));
+      str_drop_leading_zeros(code);
+      check_str(cases[i].typed[0] ? cases[i].typed : "(empty)", code,
+                cases[i].want);
+    }
+  }
+
   printf("\nfavourites\n");
   favs_load();
   check_int("start empty", favs_count(), 0);

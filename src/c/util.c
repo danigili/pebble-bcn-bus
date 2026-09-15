@@ -70,6 +70,24 @@ char *str_split(char **cursor, char sep) {
   return start;
 }
 
+// A stop sign pads the code out to four digits; the service does not know
+// it that way. "0828" is 828. All zeros keeps one, so the code stays a code
+// and the service can say it does not exist.
+void str_drop_leading_zeros(char *text) {
+  if (text == NULL) return;
+
+  size_t skip = 0;
+  while (text[skip] == '0' && text[skip + 1] != '\0') skip++;
+  if (skip == 0) return;
+
+  size_t i = 0;
+  while (text[skip + i] != '\0') {
+    text[i] = text[skip + i];
+    i++;
+  }
+  text[i] = '\0';
+}
+
 void str_copy(char *dst, const char *src, size_t cap) {
   if (cap == 0) return;
   if (src == NULL) { dst[0] = '\0'; return; }
